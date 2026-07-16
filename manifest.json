@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Chino · HSK",
+  "short_name": "Chino HSK",
+  "description": "Diccionario, SRS, escritura de caracteres, ejercicios y exámenes para los niveles HSK 1–9 de chino mandarín.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F7FC",
+  "theme_color": "#F4F7FC",
+  "lang": "es",
+  "icons": [
+    { "src": "assets/images/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/images/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/images/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
