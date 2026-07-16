@@ -587,16 +587,16 @@ var MJ_EMOJI = {
 };
 
 /* posiciones en medias unidades: cada ficha ocupa 2×2, z = capa.
-   Tablero único 6×8 con 3 capas: 48 + 24 + 8 = 80 fichas (40 parejas). */
+   Tablero único 7×8 en pirámide de 3 capas: 56 + 30 + 12 = 98 fichas (49 parejas). */
 function mjLayout() {
   var pos = [];
   function rect(z, x0, y0, cols, rows) {
     for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++)
       pos.push({ x: x0 + c * 2, y: y0 + r * 2, z: z });
   }
-  rect(0, 0, 0, 6, 8);
-  rect(1, 2, 2, 4, 6);
-  rect(2, 4, 4, 2, 4);
+  rect(0, 0, 0, 7, 8);
+  rect(1, 2, 2, 5, 6);
+  rect(2, 4, 4, 3, 4);
   return pos;
 }
 
@@ -675,6 +675,11 @@ function startMahjong(w) {
   mjDeal(tiles, ids);
 
   var left = pairs, errs = 0, sel = null, lock = false;
+  var failed = {};   // pids ya fallados: cada carácter cuenta como error una sola vez
+  function countFail(p1, p2) {
+    if (!failed[p1] || !failed[p2]) errs++;
+    failed[p1] = failed[p2] = 1;
+  }
 
   w.appendChild(App.el('div', 'q-top',
     '<span class="q-count">Mahjong · ' + pairs + ' parejas</span>' +
@@ -686,9 +691,17 @@ function startMahjong(w) {
     if (t.y + 2 > halfH) halfH = t.y + 2;
   });
   var board = App.el('div', 'mj-board');
-  board.style.maxWidth = Math.min(halfW * 44, 500) + 'px';
-  board.style.aspectRatio = (halfW / (halfH * 1.18)).toFixed(4);
+  board.style.aspectRatio = (halfW / (halfH * 1.05)).toFixed(4);
   w.appendChild(board);
+  /* el ancho se deriva de la altura libre: el tablero entero debe verse sin scroll */
+  function fitBoard() {
+    if (!board.isConnected) { window.removeEventListener('resize', fitBoard); return; }
+    var avail = window.innerHeight - board.getBoundingClientRect().top - 200; // leyenda + botones + nav
+    var byH = avail * halfW / (halfH * 1.05);
+    board.style.maxWidth = Math.round(Math.max(250, Math.min(500, halfW * 44, byH))) + 'px';
+  }
+  fitBoard();
+  window.addEventListener('resize', fitBoard);
 
   function tileHtml(t) {
     var word = words[t.pid];
@@ -732,8 +745,8 @@ function startMahjong(w) {
 
   function tap(t) {
     if (lock || t.gone || !t.free) return;
+    if (sel === t) { t.el.classList.remove('sel'); sel = null; return; } // deseleccionar: sin audio
     if (t.kind === 'h') App.speak(App.disp(words[t.pid]));
-    if (sel === t) { t.el.classList.remove('sel'); sel = null; return; }
     if (!sel) { sel = t; t.el.classList.add('sel'); return; }
     var a = sel;
     sel = null;
@@ -759,7 +772,7 @@ function startMahjong(w) {
         setTimeout(function () { if (state === s) { reshuffle(); lock = false; } }, 750);
       }
     } else {
-      errs++;
+      countFail(a.pid, t.pid);
       App.day('bad', 1);
       lock = true;
       a.el.classList.add('err'); t.el.classList.add('err');
@@ -797,7 +810,7 @@ function startMahjong(w) {
     if (lock) return;
     var pr = freePair();
     if (!pr) return;
-    errs++;
+    countFail(pr[0].pid, pr[1].pid);   // la pista también cuenta una sola vez por carácter
     pr.forEach(function (t) { t.el.classList.add('hint'); });
     setTimeout(function () { pr.forEach(function (t) { t.el.classList.remove('hint'); }); }, 1300);
   };
