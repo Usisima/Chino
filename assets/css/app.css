@@ -848,16 +848,17 @@ select option { background: var(--surface); color: var(--ink); }
   background: var(--bg); pointer-events: none;
 }
 .nav-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; padding: 0.5rem 0.15rem 0.45rem;
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; padding: 0.5rem 0.1rem 0.45rem;
   text-decoration: none; background: none; border: none;
   color: var(--ink3);
   font-family: 'DM Sans', sans-serif; font-size: 8px; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  letter-spacing: 0.04em; text-transform: uppercase;
   transition: color 0.2s; position: relative; cursor: pointer;
 }
+.nav-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .nav-item svg {
-  width: 46px; height: 28px; padding: 4px 13px;
+  width: 42px; height: 27px; padding: 4px 11px;
   border-radius: 99px;
   stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
   transition: background 0.2s, box-shadow 0.2s;

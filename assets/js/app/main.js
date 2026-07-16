@@ -52,6 +52,14 @@ document.querySelectorAll('.nav-item').forEach(function (b) {
   var tb = App.$('theme-toggle');
   if (tb) tb.addEventListener('click', App.toggleTheme);
 })();
+
+/* el icono del header abre Perfil (perfil + ajustes del usuario) */
+(function () {
+  var hp = App.$('open-profile');
+  if (!hp) return;
+  hp.addEventListener('click', function () { App.goto('profile'); });
+  hp.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); App.goto('profile'); } });
+})();
 App.$('overlay-back').addEventListener('click', App.closeOverlay);
 App.$('overlay').addEventListener('click', function (e) {
   if (e.target === App.$('overlay')) App.closeOverlay();
@@ -116,6 +124,6 @@ App.ready.then(function () {
 /* header + primera vista */
 App.hdr();
 var h = (location.hash || '').slice(1);
-App.goto(['home', 'learn', 'dict', 'practice', 'profile'].indexOf(h) >= 0 ? h : 'home');
+App.goto(['home', 'learn', 'dict', 'practice', 'strokes', 'songs', 'profile'].indexOf(h) >= 0 ? h : 'home');
 
 })();
