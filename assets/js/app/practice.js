@@ -586,22 +586,17 @@ var MJ_EMOJI = {
   '画': '🎨', '生日': '🎂', '钓鱼': '🎣', '爬山': '🧗', '冬天': '⛄'
 };
 
-var MJ_SIZES = {
-  easy: { name: 'Fácil', pairs: 8 },
-  med: { name: 'Medio', pairs: 12 },
-  hard: { name: 'Difícil', pairs: 16 }
-};
-
-/* posiciones en medias unidades: cada ficha ocupa 2×2, z = capa */
-function mjLayout(sizeId) {
+/* posiciones en medias unidades: cada ficha ocupa 2×2, z = capa.
+   Tablero único 6×8 con 3 capas: 48 + 24 + 8 = 80 fichas (40 parejas). */
+function mjLayout() {
   var pos = [];
   function rect(z, x0, y0, cols, rows) {
     for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++)
       pos.push({ x: x0 + c * 2, y: y0 + r * 2, z: z });
   }
-  if (sizeId === 'easy') { rect(0, 0, 0, 4, 3); rect(1, 2, 1, 2, 2); }
-  else if (sizeId === 'hard') { rect(0, 0, 0, 6, 4); rect(1, 3, 2, 3, 2); rect(2, 5, 2, 1, 2); }
-  else { rect(0, 0, 0, 5, 4); rect(1, 3, 2, 2, 2); }
+  rect(0, 0, 0, 6, 8);
+  rect(1, 2, 2, 4, 6);
+  rect(2, 4, 4, 2, 4);
   return pos;
 }
 
@@ -664,41 +659,26 @@ function mjWords(n) {
   return out;
 }
 
-function startMahjong(w, sizeId) {
-  sizeId = sizeId || App.S.mjSize || 'med';
-  if (!MJ_SIZES[sizeId]) sizeId = 'med';
-  var words = mjWords(MJ_SIZES[sizeId].pairs);
-  if (words.length < MJ_SIZES.easy.pairs) { App.toast('No hay suficientes palabras con imagen'); return; }
-  if (words.length < MJ_SIZES[sizeId].pairs) sizeId = words.length >= MJ_SIZES.med.pairs ? 'med' : 'easy';
-  var size = MJ_SIZES[sizeId];
-  words = words.slice(0, size.pairs);
-  App.S.mjSize = sizeId; App.saveS();
+function startMahjong(w) {
+  var tiles = mjLayout();
+  var pairs = tiles.length / 2;
+  var words = mjWords(pairs);
+  if (words.length < pairs) { App.toast('No hay suficientes palabras con imagen'); return; }
 
   clearBelow(w);
   sub = 'round';
-  var fresh = !(state && state.mahjong);   // al cambiar de tamaño no se apila otra entrada
   var s = state = { mahjong: true };
-  if (fresh) App.pushState({ sub: 'round' });
+  App.pushState({ sub: 'round' });
 
-  var tiles = mjLayout(sizeId);
   var ids = [];
-  for (var i = 0; i < size.pairs; i++) ids.push(i);
+  for (var i = 0; i < pairs; i++) ids.push(i);
   mjDeal(tiles, ids);
 
-  var left = size.pairs, errs = 0, sel = null, lock = false;
+  var left = pairs, errs = 0, sel = null, lock = false;
 
   w.appendChild(App.el('div', 'q-top',
-    '<span class="q-count">Mahjong · ' + size.pairs + ' parejas</span>' +
+    '<span class="q-count">Mahjong · ' + pairs + ' parejas</span>' +
     '<span class="q-score" id="mj-left">' + left + ' restantes</span>'));
-
-  var diffs = App.el('div', 'mj-diffs');
-  Object.keys(MJ_SIZES).forEach(function (id) {
-    var b = App.el('button', 'chip' + (id === sizeId ? ' active' : ''),
-      MJ_SIZES[id].name + '<span class="n">' + MJ_SIZES[id].pairs + '</span>');
-    b.onclick = function () { if (id !== sizeId) startMahjong(w, id); };
-    diffs.appendChild(b);
-  });
-  w.appendChild(diffs);
 
   var halfW = 0, halfH = 0;
   tiles.forEach(function (t) {
@@ -769,7 +749,7 @@ function startMahjong(w, sizeId) {
         '<span class="zh">' + App.toneSpans(App.disp(word), word.p) + '</span> · ' +
         App.esc(word.p) + ' · ' + App.esc(App.short(word));
       if (!left) {
-        setTimeout(function () { if (state === s) renderResults(w, Math.max(0, size.pairs - errs), size.pairs, 'mahjong'); }, 600);
+        setTimeout(function () { if (state === s) renderResults(w, Math.max(0, pairs - errs), pairs, 'mahjong'); }, 600);
         return;
       }
       refresh();
@@ -797,8 +777,9 @@ function startMahjong(w, sizeId) {
     el.style.top = (t.y / halfH * 100) + '%';
     el.style.width = 'calc(' + (2 / halfW * 100) + '% - 2px)';
     el.style.height = 'calc(' + (2 / halfH * 100) + '% - 2px)';
-    el.style.marginLeft = (-4 * t.z) + 'px';
-    el.style.marginTop = (-5 * t.z) + 'px';
+    el.style.marginLeft = (-6 * t.z) + 'px';
+    el.style.marginTop = (-8 * t.z) + 'px';
+    if (t.z) el.style.filter = 'brightness(' + (1 + t.z * 0.05) + ')';
     el.style.zIndex = t.z * 10 + 1;
     el.style.fontSize = (2 / halfW * 100) + 'cqw';  // = ancho de la ficha
     t.el = el;

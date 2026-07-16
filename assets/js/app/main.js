@@ -99,8 +99,21 @@ window.addEventListener('appinstalled', function () {
 
 /* service worker */
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  // ¿ya había un SW controlando al cargar? Si no, es la primera instalación
+  // y NO hay que recargar (evita un bucle de recarga en la primera visita).
+  var hadController = !!navigator.serviceWorker.controller;
+  var refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (!hadController || refreshing) return;
+    refreshing = true;
+    location.reload();   // el SW nuevo tomó el control: recarga para usar los archivos nuevos
+  });
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      // busca versión nueva al abrir y cada 30 min si la app queda abierta
+      try { reg.update(); } catch (e) {}
+      setInterval(function () { try { reg.update(); } catch (e) {} }, 30 * 60 * 1000);
+    }).catch(function () {});
   });
 }
 
