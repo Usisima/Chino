@@ -99,6 +99,9 @@ function renderTrace(w) {
     '<div class="writer-es">' + App.esc(def) + '</div>');
   w.appendChild(under);
 
+  // suena la pronunciación del carácter al empezar
+  setTimeout(function () { if (sState === s) App.speak(ch); }, 350);
+
   App.strokes(ch).then(function (d) {
     if (!d) { s.i++; renderTrace(w); return; }
     var size = Math.min(300, Math.floor(window.innerWidth * 0.78));

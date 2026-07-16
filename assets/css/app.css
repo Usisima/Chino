@@ -420,9 +420,10 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .chip .n { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--ink3); margin-left: 4px; }
 .chip.active .n { color: var(--on-brand); opacity: 0.8; }
 
-/* rejilla de radicales: filas justificadas de margen a margen, sin hueco a la derecha */
-.rad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 0.4rem; margin-bottom: 0.5rem; }
-.rad-grid .chip { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; padding: 0.42rem 0.4rem; }
+/* rejilla de radicales/caracteres: celdas más grandes y justificadas margen a margen */
+.rad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem; }
+.rad-grid .chip { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 0.7rem 0.4rem; font-size: 1.35rem; line-height: 1.1; }
+.rad-grid .chip .n { font-size: 0.6rem; align-self: flex-start; margin-top: 2px; }
 
 /* ---------- Búsqueda ---------- */
 .search-box {
@@ -716,6 +717,7 @@ select option { background: var(--surface); color: var(--ink); }
 .q-opts { display: flex; flex-direction: column; gap: 0.55rem; animation: qIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both; }
 .q-opts.grid2 { display: grid; grid-template-columns: 1fr 1fr; }
 .q-opt {
+  position: relative;
   border: 1.5px solid var(--border2); border-radius: var(--r2);
   background: var(--surface); box-shadow: var(--shadow-sm);
   padding: 0.95rem 1rem; font-size: 0.98rem; color: var(--ink);
@@ -734,8 +736,9 @@ select option { background: var(--surface); color: var(--ink); }
 .q-opt.bad { border-color: var(--red); background: var(--red-soft); color: var(--red); }
 .q-opt.off { pointer-events: none; opacity: 0.45; }
 .q-opt.ok, .q-opt.bad { opacity: 1; }
-.opt-check { display: inline-block; margin-right: 8px; font-weight: 800; animation: checkPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-@keyframes checkPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* palomita lateral: no recentra el contenido de la opción */
+.opt-check { position: absolute; right: 14px; top: 50%; font-weight: 800; animation: checkPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes checkPop { from { transform: translateY(-50%) scale(0); opacity: 0; } to { transform: translateY(-50%) scale(1); opacity: 1; } }
 
 /* Emparejar / memorama */
 .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
@@ -931,9 +934,9 @@ select option { background: var(--surface); color: var(--ink); }
 
 /* letra */
 .ly-hint { font-size: 0.74rem; color: var(--ink3); text-align: center; margin: 0.2rem 0 0.8rem; line-height: 1.5; }
-.ly-line { padding: 11px 12px; border-radius: 14px; margin-bottom: 6px; transition: background 0.35s; }
+.ly-line { padding: 13px 14px; border-radius: 14px; margin-bottom: 6px; transition: background 0.35s; }
 .ly-line.active { background: var(--brand-soft); }
-.ly-hz { font-family: var(--hanzi); font-size: 1.5rem; line-height: 1.75; }
+.ly-hz { font-family: var(--hanzi); font-size: 1.85rem; line-height: 1.7; text-align: center; }
 .ly-ch { cursor: pointer; padding: 0 1px; border-radius: 5px; transition: background 0.15s; }
 .ly-ch.known { background: var(--accent-dim); box-shadow: inset 0 -2px 0 var(--accent); }
 .ly-py { font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--gold); margin-top: 4px; }

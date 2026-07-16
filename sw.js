@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'chino-v6';
+const CACHE = 'chino-v8';
 
 // App shell + datos principales: si algo falla, el SW no se instala.
 // Los shards de trazos (assets/data/strokes/) se cachean bajo demanda.
@@ -15,6 +15,8 @@ const CORE = [
   './assets/js/app/learn.js',
   './assets/js/app/dict.js',
   './assets/js/app/practice.js',
+  './assets/js/app/strokes.js',
+  './assets/js/app/songs.js',
   './assets/js/app/profile.js',
   './assets/js/app/main.js',
   './assets/data/words.json',

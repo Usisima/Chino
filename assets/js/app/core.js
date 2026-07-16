@@ -501,19 +501,11 @@ App.wordRow = function (w, opts) {
   opts = opts || {};
   var stage = App.srsStage(w.s);
   var row = App.el('div', 'w-row' + (stage === 'known' ? ' learned' : ''));
-  var tags = '';
-  if (opts.tags !== false) {
-    var lt = App.lvlTag(w);
-    tags = '<div class="w-tags">' +
-      (lt ? '<span class="w-tag jade">' + lt + '</span>' : '') +
-      (stage !== 'new' ? '<span class="w-tag">' + (stage === 'known' ? 'dominada' : 'aprendiendo') + '</span>' : '') +
-      '</div>';
-  }
   row.innerHTML =
     '<span class="w-hanzi">' + App.dispTone(w) + '</span>' +
     '<div class="w-info">' +
       '<div class="w-pinyin">' + App.esc(App.roman(w)) + '</div>' +
-      '<div class="w-es">' + App.esc(App.trans(w)) + '</div>' + tags +
+      '<div class="w-es">' + App.esc(App.trans(w)) + '</div>' +
     '</div>' +
     '<div class="w-actions">' +
       '<button class="icon-btn" data-a="audio" title="Escuchar"><svg viewBox="0 0 24 24"><use href="#icon-audio"/></svg></button>' +
@@ -551,7 +543,7 @@ App.closeAllOverlays = function () { ovStack = []; ovRender(); };
 
 /* ---------- ficha de palabra ---------- */
 App.openWord = function (w) {
-  App.openOverlay(App.lvlTag(w) || 'Palabra', function (body) { renderWord(body, w); });
+  App.openOverlay(App.disp(w) || 'Palabra', function (body) { renderWord(body, w); });
 };
 
 function relWords(w) {
@@ -617,7 +609,6 @@ function renderWord(body, w) {
   var kv = App.el('div', 'card');
   kv.innerHTML =
     (w.cls ? '<div class="kv"><span class="k">Clasificador</span><span class="v zh">' + App.esc(w.cls) + '</span></div>' : '') +
-    '<div class="kv"><span class="k">Nivel HSK</span><span class="v">' + (App.lvlTag(w) || '—') + '</span></div>' +
     (w.rad ? '<div class="kv"><span class="k">Radical</span><span class="v"><span class="zh">' + App.esc(w.rad) + '</span></span></div>' : '') +
     (strokesTotal ? '<div class="kv"><span class="k">Trazos</span><span class="v">' + strokesTotal + '</span></div>' : '') +
     (w.pos ? '<div class="kv"><span class="k">Categoría</span><span class="v">' + App.esc(App.posES(w.pos)) + '</span></div>' : '') +

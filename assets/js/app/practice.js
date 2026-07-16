@@ -204,6 +204,8 @@ function renderInfMC(w) {
         okBtn.classList.add('ok');
       }
       okBtn.insertAdjacentHTML('afterbegin', '<span class="opt-check">✓</span>');
+      // en Traducir, suena el hanzi correcto al acertar
+      if (s.mode === 'trans' && right) App.speak(App.disp(word));
       setTimeout(function () { if (state === s) renderInfMC(w); }, right ? 750 : 1400);
     };
     opts.appendChild(b);
@@ -309,6 +311,7 @@ function renderQ(w, onDone, extraTop) {
         okBtn.classList.add('ok');
       }
       okBtn.insertAdjacentHTML('afterbegin', '<span class="opt-check">✓</span>');
+      if (q.mode === 'trans' && right) App.speak(App.disp(word));
       setTimeout(function () { s.i++; renderQ(w, onDone, extraTop && s.topFn ? s.topFn() : extraTop); }, right ? 800 : 1500);
     };
     opts.appendChild(b);
