@@ -124,6 +124,7 @@ App.ready.then(function () {
 /* header + primera vista */
 App.hdr();
 var h = (location.hash || '').slice(1);
-App.goto(['home', 'learn', 'dict', 'practice', 'strokes', 'songs', 'profile'].indexOf(h) >= 0 ? h : 'home');
+// entrada base del historial: se reemplaza, así el primer "atrás" sale de la app
+App.goto(['home', 'learn', 'dict', 'practice', 'strokes', 'songs', 'profile'].indexOf(h) >= 0 ? h : 'home', true);
 
 })();

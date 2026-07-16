@@ -5,8 +5,25 @@
 
 var state = null;   // sesión activa
 var timerId = null;
+var sub = 'hub';    // subpantalla: 'hub' | 'round' | 'stats' (para el gesto de regresar)
 
 function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+
+/* Gesto de regresar dentro de Práctica:
+   ronda → estadísticas → hub → (sale de la sección) */
+App.viewBack.practice = function () {
+  var w = App.$('practice-wrap');
+  if (sub === 'round') {
+    if (state && state.seen !== undefined) {
+      renderRoundStats(w, true);   // deja una entrada extra: otro "atrás" va al hub
+    } else {
+      state = null; renderHub(w);  // juegos sin marcador acumulado
+    }
+    return true;
+  }
+  if (sub === 'stats') { renderHub(w); return true; }
+  return false; // en el hub: dejar salir de la sección
+};
 
 App.views.practice = function () {
   stopTimer();
@@ -80,6 +97,7 @@ function confettiBurst(host) {
 /* ---------- hub ---------- */
 function renderHub(w) {
   clearBelow(w);
+  sub = 'hub'; state = null;
 
   var lvlRow = App.el('div', 'select-row');
   lvlRow.innerHTML = '<label>Nivel HSK ' + (App.S.scheme === 'new' ? '3.0' : '2.0') + '</label>';
@@ -93,17 +111,18 @@ function renderHub(w) {
   w.appendChild(lvlRow);
 
   w.appendChild(App.el('p', 'section-title', 'Ejercicios'));
-  hubCard(w, '读', 'Leer', 'Ve el hanzi y elige el significado · sin límite', function () { startMC(w, 'read'); });
-  hubCard(w, '译', 'Traducir', 'Ve el significado y elige el hanzi · sin límite', function () { startMC(w, 'trans'); });
+  hubCard(w, '读', 'Leer', 'Ve el hanzi y elige el significado', function () { startMC(w, 'read'); });
+  hubCard(w, '译', 'Traducir', 'Ve el significado y elige el hanzi', function () { startMC(w, 'trans'); });
   if ('speechSynthesis' in window) {
-    hubCard(w, '听', 'Escuchar', 'Escucha y elige el significado · sin límite', function () { startMC(w, 'listen'); });
-    hubCard(w, '写', 'Dictado', 'Escucha y escribe el pinyin · sin límite', function () { startDictation(w); });
+    hubCard(w, '听', 'Escuchar', 'Escucha y elige el significado', function () { startMC(w, 'listen'); });
+    hubCard(w, '写', 'Dictado', 'Escucha y escribe el pinyin', function () { startDictation(w); });
   }
   hubCard(w, '对', 'Emparejar', 'Une cada hanzi con su significado', function () { startMatch(w); });
   hubCard(w, '笔', 'Escritura', 'Traza caracteres con el orden correcto', function () { startWriting(w); });
 
   w.appendChild(App.el('p', 'section-title', 'Juegos'));
   hubCard(w, '记', 'Memorama', 'Encuentra las parejas ocultas', function () { startMemo(w); });
+  hubCard(w, '麻', 'Mahjong', 'Une cada hanzi con su imagen · retira las fichas libres', function () { startMahjong(w); });
   hubCard(w, '闪', 'Contrarreloj', '60 segundos, tantas como puedas', function () { startRush(w); });
 
   w.appendChild(App.el('p', 'section-title', 'Examen'));
@@ -150,11 +169,13 @@ function startMC(w, mode) {
     started: Date.now(), arr: pool()
   };
   state.again = function (ww) { startMC(ww, mode); };
+  App.pushState({ sub: 'round' });
   renderInfMC(w);
 }
 
 function renderInfMC(w) {
   clearBelow(w);
+  sub = 'round';
   var s = state;
   if (!s) return renderHub(w);
   var p = s.arr;
@@ -218,9 +239,13 @@ function renderInfMC(w) {
   w.appendChild(fin);
 }
 
-/* estadísticas al terminar una ronda infinita (MC, dictado, escritura) */
-function renderRoundStats(w) {
+/* estadísticas al terminar una ronda infinita (MC, dictado, escritura).
+   viaBack = true cuando llega por el gesto de regresar: apila una entrada
+   para que el siguiente "atrás" vuelva al hub. */
+function renderRoundStats(w, viaBack) {
   clearBelow(w);
+  sub = 'stats';
+  if (viaBack) App.pushState({ sub: 'stats' }); else App.replaceState({ sub: 'stats' });
   var s = state;
   state = null;
   if (!s) return renderHub(w);
@@ -264,6 +289,7 @@ function renderRoundStats(w) {
 
 function renderQ(w, onDone, extraTop) {
   clearBelow(w);
+  sub = 'round';
   var s = state;
   if (s.i >= s.qs.length) return onDone();
   var q = s.qs[s.i], word = q.w;
@@ -321,6 +347,8 @@ function renderQ(w, onDone, extraTop) {
 
 function renderResults(w, ok, total, kind) {
   clearBelow(w);
+  sub = 'stats';
+  App.replaceState({ sub: 'stats' });
   state = null;
   var pct = total ? Math.round(ok / total * 100) : 0;
   App.mission('quiz', 1);
@@ -343,10 +371,12 @@ function renderResults(w, ok, total, kind) {
 function startDictation(w) {
   state = { dict: true, ok: 0, bad: 0, seen: 0, name: 'Dictado', started: Date.now(), arr: pool() };
   state.again = startDictation;
+  App.pushState({ sub: 'round' });
   renderDict(w);
 }
 function renderDict(w) {
   clearBelow(w);
+  sub = 'round';
   var s = state;
   if (!s) return renderHub(w);
   var word = App.sample(s.arr, 1)[0];
@@ -405,6 +435,8 @@ function renderDict(w) {
 /* ---------- emparejar ---------- */
 function startMatch(w) {
   clearBelow(w);
+  sub = 'round';
+  App.pushState({ sub: 'round' });
   var words = sampleDistinct(pool(), 6);
   var tiles = [];
   words.forEach(function (word, i) {
@@ -460,6 +492,8 @@ function startMatch(w) {
 /* ---------- memorama ---------- */
 function startMemo(w) {
   clearBelow(w);
+  sub = 'round';
+  App.pushState({ sub: 'round' });
   var words = sampleDistinct(pool(), 6);
   var tiles = [];
   words.forEach(function (word, i) {
@@ -514,6 +548,288 @@ function startMemo(w) {
   w.appendChild(quit);
 }
 
+/* ---------- mahjong: hanzi ↔ imagen ---------- */
+
+/* «imagen» (emoji) por palabra; solo entran al juego las que existen en el dataset.
+   Evitados los emojis que Windows 10 no muestra (Emoji ≥ 13) y las banderas. */
+var MJ_EMOJI = {
+  /* personas y cuerpo */
+  '人': '🧑', '男人': '👨', '女人': '👩', '孩子': '🧒', '婴儿': '👶', '医生': '👨‍⚕️', '老师': '👨‍🏫', '学生': '👨‍🎓',
+  '警察': '👮', '朋友': '🤝', '家庭': '👨‍👩‍👧', '手': '✋', '眼睛': '👁️', '耳朵': '👂', '鼻子': '👃', '嘴': '👄',
+  '心': '❤️', '脚': '🦶', '腿': '🦵', '牙齿': '🦷',
+  /* animales */
+  '猫': '🐱', '狗': '🐶', '鱼': '🐟', '鸟': '🐦', '马': '🐴', '牛': '🐮', '羊': '🐑', '猪': '🐷', '鸡': '🐔',
+  '兔子': '🐰', '老虎': '🐯', '熊猫': '🐼', '大象': '🐘', '猴子': '🐵', '蛇': '🐍', '龙': '🐉', '老鼠': '🐭',
+  '熊': '🐻', '狮子': '🦁', '鸭子': '🦆',
+  /* naturaleza */
+  '水': '💧', '火': '🔥', '山': '⛰️', '树': '🌳', '花': '🌸', '草': '🌱', '太阳': '☀️', '月亮': '🌙', '星星': '⭐',
+  '雨': '🌧️', '雪': '❄️', '风': '💨', '云': '☁️', '海': '🌊', '石头': '🗿', '冰': '🧊', '森林': '🌲', '叶子': '🍃', '地球': '🌍',
+  /* comida y bebida */
+  '茶': '🍵', '咖啡': '☕', '牛奶': '🥛', '苹果': '🍎', '香蕉': '🍌', '西瓜': '🍉', '葡萄': '🍇', '草莓': '🍓',
+  '面包': '🍞', '米饭': '🍚', '面条': '🍜', '鸡蛋': '🥚', '肉': '🍖', '蛋糕': '🍰', '糖': '🍬', '冰淇淋': '🍦',
+  '啤酒': '🍺', '果汁': '🧃', '汤': '🍲', '饺子': '🥟', '蔬菜': '🥦', '水果': '🍑', '盐': '🧂', '巧克力': '🍫', '饼干': '🍪',
+  /* objetos */
+  '书': '📖', '笔': '🖊️', '铅笔': '✏️', '椅子': '🪑', '门': '🚪', '床': '🛏️', '电话': '☎️', '手机': '📱',
+  '电脑': '💻', '电视': '📺', '灯': '💡', '伞': '☂️', '钟': '⏰', '手表': '⌚', '钥匙': '🔑', '钱': '💰',
+  '信': '✉️', '地图': '🗺️', '照相机': '📷', '报纸': '📰', '药': '💊', '刀': '🔪', '箱子': '📦', '行李箱': '🧳',
+  '眼镜': '👓', '书包': '🎒', '礼物': '🎁', '剪刀': '✂️', '尺子': '📏', '垃圾': '🗑️', '照片': '🖼️', '电池': '🔋',
+  /* transporte y lugares */
+  '汽车': '🚗', '公共汽车': '🚌', '出租车': '🚕', '自行车': '🚲', '火车': '🚂', '飞机': '✈️', '船': '⛵',
+  '地铁': '🚇', '摩托车': '🏍️', '卡车': '🚚', '救护车': '🚑', '消防车': '🚒', '火车站': '🚉', '机场': '🛫',
+  '家': '🏠', '学校': '🏫', '医院': '🏥', '银行': '🏦', '商店': '🏪', '工厂': '🏭', '厕所': '🚻', '桥': '🌉',
+  '城市': '🏙️', '饭馆': '🍽️', '宾馆': '🏨',
+  /* ropa */
+  '衣服': '👕', '裤子': '👖', '鞋': '👟', '帽子': '🧢', '裙子': '👗', '袜子': '🧦', '大衣': '🧥',
+  /* actividades */
+  '足球': '⚽', '篮球': '🏀', '乒乓球': '🏓', '网球': '🎾', '游泳': '🏊', '跑步': '🏃', '唱歌': '🎤', '跳舞': '💃',
+  '音乐': '🎵', '电影': '🎬', '游戏': '🎮', '睡觉': '😴', '哭': '😢', '笑': '😄', '爱': '💕', '写': '✍️',
+  '画': '🎨', '生日': '🎂', '钓鱼': '🎣', '爬山': '🧗', '冬天': '⛄'
+};
+
+var MJ_SIZES = {
+  easy: { name: 'Fácil', pairs: 8 },
+  med: { name: 'Medio', pairs: 12 },
+  hard: { name: 'Difícil', pairs: 16 }
+};
+
+/* posiciones en medias unidades: cada ficha ocupa 2×2, z = capa */
+function mjLayout(sizeId) {
+  var pos = [];
+  function rect(z, x0, y0, cols, rows) {
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++)
+      pos.push({ x: x0 + c * 2, y: y0 + r * 2, z: z });
+  }
+  if (sizeId === 'easy') { rect(0, 0, 0, 4, 3); rect(1, 2, 1, 2, 2); }
+  else if (sizeId === 'hard') { rect(0, 0, 0, 6, 4); rect(1, 3, 2, 3, 2); rect(2, 5, 2, 1, 2); }
+  else { rect(0, 0, 0, 5, 4); rect(1, 3, 2, 2, 2); }
+  return pos;
+}
+
+/* libre = sin ficha encima y con el lado izquierdo o derecho despejado */
+function mjIsFree(t, alive) {
+  var L = false, R = false;
+  for (var i = 0; i < alive.length; i++) {
+    var o = alive[i];
+    if (o === t) continue;
+    if (o.z > t.z && Math.abs(o.x - t.x) < 2 && Math.abs(o.y - t.y) < 2) return false;
+    if (o.z === t.z && Math.abs(o.y - t.y) < 2 && Math.abs(o.x - t.x) <= 2) {
+      if (o.x < t.x) L = true; else R = true;
+    }
+  }
+  return !(L && R);
+}
+
+/* reparto por simulación inversa (retirando parejas libres): el tablero siempre tiene solución */
+function mjDeal(tiles, ids) {
+  for (var attempt = 0; attempt < 80; attempt++) {
+    var left = tiles.slice();
+    var order = App.shuffle(ids.slice());
+    var ok = true;
+    for (var k = 0; k < order.length; k++) {
+      var free = [];
+      for (var i = 0; i < left.length; i++) if (mjIsFree(left[i], left)) free.push(left[i]);
+      if (free.length < 2) { ok = false; break; }
+      var pick = App.sample(free, 2);
+      var flip = Math.random() < 0.5;
+      pick[0].pid = pick[1].pid = order[k];
+      pick[0].kind = flip ? 'h' : 'e';
+      pick[1].kind = flip ? 'e' : 'h';
+      left.splice(left.indexOf(pick[0]), 1);
+      left.splice(left.indexOf(pick[1]), 1);
+    }
+    if (ok) return;
+  }
+  /* muy improbable: asignación directa (el barajado automático corrige atascos) */
+  var sh = App.shuffle(tiles.slice());
+  for (var j = 0; j < ids.length; j++) {
+    sh[2 * j].pid = sh[2 * j + 1].pid = ids[j];
+    sh[2 * j].kind = 'h'; sh[2 * j + 1].kind = 'e';
+  }
+}
+
+/* palabras del nivel con imagen; se completa con otros niveles si faltan */
+function mjWords(n) {
+  var out = [], seenE = {}, seenG = {};
+  function take(list) {
+    App.shuffle(list);
+    for (var i = 0; i < list.length && out.length < n; i++) {
+      var word = list[i], e = MJ_EMOJI[word.s], g = App.gloss(word);
+      if (!e || seenE[e] || seenG[g]) continue;
+      seenE[e] = 1; seenG[g] = 1;
+      out.push(word);
+    }
+  }
+  take(App.levelWords(App.S.scheme, App.S.level).filter(function (word) { return MJ_EMOJI[word.s]; }));
+  if (out.length < n) take(App.W.filter(function (word) { return MJ_EMOJI[word.s]; }));
+  return out;
+}
+
+function startMahjong(w, sizeId) {
+  sizeId = sizeId || App.S.mjSize || 'med';
+  if (!MJ_SIZES[sizeId]) sizeId = 'med';
+  var words = mjWords(MJ_SIZES[sizeId].pairs);
+  if (words.length < MJ_SIZES.easy.pairs) { App.toast('No hay suficientes palabras con imagen'); return; }
+  if (words.length < MJ_SIZES[sizeId].pairs) sizeId = words.length >= MJ_SIZES.med.pairs ? 'med' : 'easy';
+  var size = MJ_SIZES[sizeId];
+  words = words.slice(0, size.pairs);
+  App.S.mjSize = sizeId; App.saveS();
+
+  clearBelow(w);
+  sub = 'round';
+  var fresh = !(state && state.mahjong);   // al cambiar de tamaño no se apila otra entrada
+  var s = state = { mahjong: true };
+  if (fresh) App.pushState({ sub: 'round' });
+
+  var tiles = mjLayout(sizeId);
+  var ids = [];
+  for (var i = 0; i < size.pairs; i++) ids.push(i);
+  mjDeal(tiles, ids);
+
+  var left = size.pairs, errs = 0, sel = null, lock = false;
+
+  w.appendChild(App.el('div', 'q-top',
+    '<span class="q-count">Mahjong · ' + size.pairs + ' parejas</span>' +
+    '<span class="q-score" id="mj-left">' + left + ' restantes</span>'));
+
+  var diffs = App.el('div', 'mj-diffs');
+  Object.keys(MJ_SIZES).forEach(function (id) {
+    var b = App.el('button', 'chip' + (id === sizeId ? ' active' : ''),
+      MJ_SIZES[id].name + '<span class="n">' + MJ_SIZES[id].pairs + '</span>');
+    b.onclick = function () { if (id !== sizeId) startMahjong(w, id); };
+    diffs.appendChild(b);
+  });
+  w.appendChild(diffs);
+
+  var halfW = 0, halfH = 0;
+  tiles.forEach(function (t) {
+    if (t.x + 2 > halfW) halfW = t.x + 2;
+    if (t.y + 2 > halfH) halfH = t.y + 2;
+  });
+  var board = App.el('div', 'mj-board');
+  board.style.maxWidth = Math.min(halfW * 44, 500) + 'px';
+  board.style.aspectRatio = (halfW / (halfH * 1.18)).toFixed(4);
+  w.appendChild(board);
+
+  function tileHtml(t) {
+    var word = words[t.pid];
+    if (t.kind === 'h') {
+      var d = App.disp(word);
+      return '<span class="mj-zh n' + Math.min(d.length, 4) + '">' + App.toneSpans(d, word.p) + '</span>';
+    }
+    return '<span class="mj-emoji">' + MJ_EMOJI[word.s] + '</span>';
+  }
+
+  function alive() { return tiles.filter(function (t) { return !t.gone; }); }
+
+  function refresh() {
+    var al = alive();
+    al.forEach(function (t) {
+      t.free = mjIsFree(t, al);
+      t.el.classList.toggle('blocked', !t.free);
+    });
+  }
+
+  /* primera pareja emparejable entre las fichas libres (o null) */
+  function freePair() {
+    var free = alive().filter(function (t) { return t.free; });
+    var byPid = {};
+    for (var i = 0; i < free.length; i++) {
+      if (byPid[free[i].pid]) return [byPid[free[i].pid], free[i]];
+      byPid[free[i].pid] = free[i];
+    }
+    return null;
+  }
+
+  function reshuffle() {
+    if (sel) { sel.el.classList.remove('sel'); sel = null; }
+    var al = alive();
+    var rest = [], seenP = {};
+    al.forEach(function (t) { if (!seenP[t.pid]) { seenP[t.pid] = 1; rest.push(t.pid); } });
+    mjDeal(al, rest);
+    al.forEach(function (t) { t.el.innerHTML = tileHtml(t); });
+    refresh();
+  }
+
+  function tap(t) {
+    if (lock || t.gone || !t.free) return;
+    if (t.kind === 'h') App.speak(App.disp(words[t.pid]));
+    if (sel === t) { t.el.classList.remove('sel'); sel = null; return; }
+    if (!sel) { sel = t; t.el.classList.add('sel'); return; }
+    var a = sel;
+    sel = null;
+    if (a.pid === t.pid && a.kind !== t.kind) {
+      var word = words[t.pid];
+      a.el.classList.remove('sel');
+      a.gone = t.gone = true;
+      a.el.classList.add('out'); t.el.classList.add('out');
+      left--;
+      App.day('ok', 1); App.xp(2);
+      App.$('mj-left').textContent = left + ' restantes';
+      caption.innerHTML = '<span class="mj-cap-e">' + MJ_EMOJI[word.s] + '</span> ' +
+        '<span class="zh">' + App.toneSpans(App.disp(word), word.p) + '</span> · ' +
+        App.esc(word.p) + ' · ' + App.esc(App.short(word));
+      if (!left) {
+        setTimeout(function () { if (state === s) renderResults(w, Math.max(0, size.pairs - errs), size.pairs, 'mahjong'); }, 600);
+        return;
+      }
+      refresh();
+      if (!freePair()) {
+        App.toast('♻️ Sin jugadas · barajando fichas…');
+        lock = true;
+        setTimeout(function () { if (state === s) { reshuffle(); lock = false; } }, 750);
+      }
+    } else {
+      errs++;
+      App.day('bad', 1);
+      lock = true;
+      a.el.classList.add('err'); t.el.classList.add('err');
+      setTimeout(function () {
+        a.el.classList.remove('sel', 'err');
+        t.el.classList.remove('err');
+        lock = false;
+      }, 420);
+    }
+  }
+
+  tiles.forEach(function (t) {
+    var el = App.el('button', 'mj-tile', tileHtml(t));
+    el.style.left = (t.x / halfW * 100) + '%';
+    el.style.top = (t.y / halfH * 100) + '%';
+    el.style.width = 'calc(' + (2 / halfW * 100) + '% - 2px)';
+    el.style.height = 'calc(' + (2 / halfH * 100) + '% - 2px)';
+    el.style.marginLeft = (-4 * t.z) + 'px';
+    el.style.marginTop = (-5 * t.z) + 'px';
+    el.style.zIndex = t.z * 10 + 1;
+    el.style.fontSize = (2 / halfW * 100) + 'cqw';  // = ancho de la ficha
+    t.el = el;
+    el.onclick = function () { tap(t); };
+    board.appendChild(el);
+  });
+
+  var caption = App.el('div', 'mj-caption', 'Une cada carácter con su imagen · solo las fichas libres se pueden tomar');
+  w.appendChild(caption);
+
+  var row = App.el('div', 'btn-row');
+  row.style.marginTop = '1rem';
+  var bHint = App.el('button', 'btn btn-sm', 'Pista');
+  bHint.onclick = function () {
+    if (lock) return;
+    var pr = freePair();
+    if (!pr) return;
+    errs++;
+    pr.forEach(function (t) { t.el.classList.add('hint'); });
+    setTimeout(function () { pr.forEach(function (t) { t.el.classList.remove('hint'); }); }, 1300);
+  };
+  var bMix = App.el('button', 'btn btn-sm', 'Mezclar');
+  bMix.onclick = function () { if (!lock) reshuffle(); };
+  var bQuit = App.el('button', 'btn btn-sm', 'Salir');
+  bQuit.onclick = function () { state = null; renderHub(w); };
+  row.appendChild(bHint); row.appendChild(bMix); row.appendChild(bQuit);
+  w.appendChild(row);
+
+  refresh();
+}
+
 /* ---------- escritura ---------- */
 function startWriting(w) {
   clearBelow(w);
@@ -528,10 +844,12 @@ function startWriting(w) {
   if (!chars.length) { App.toast('Sin datos de escritura en este nivel'); return renderHub(w); }
   state = { writing: true, deck: App.shuffle(chars), i: 0, ok: 0, bad: 0, seen: 0, name: 'Escritura', started: Date.now() };
   state.again = startWriting;
+  App.pushState({ sub: 'round' });
   renderWriting(w);
 }
 function renderWriting(w) {
   clearBelow(w);
+  sub = 'round';
   var s = state;
   if (!s) return renderHub(w);
   if (s.i >= s.deck.length) s.i = 0; // ronda infinita: recicla los caracteres
@@ -612,10 +930,12 @@ function renderWriting(w) {
 function startRush(w) {
   var p = pool();
   state = { rush: true, ok: 0, total: 0, ends: Date.now() + 60000 };
+  App.pushState({ sub: 'round' });
   nextRush(w, p);
 }
 function nextRush(w, p) {
   clearBelow(w);
+  sub = 'round';
   var s = state;
   if (!s || Date.now() >= s.ends) {
     var ok = s ? s.ok : 0, total = s ? s.total : 0;
@@ -672,6 +992,7 @@ function startExam(w) {
     qs: makeQs(20, modes), i: 0, ok: 0, name: 'Examen',
     exam: true, ends: Date.now() + 10 * 60000, started: Date.now()
   };
+  App.pushState({ sub: 'round' });
   renderExamQ(w);
 }
 function renderExamQ(w) {
@@ -698,6 +1019,8 @@ function finishExam(w) {
   stopTimer();
   var s = state;
   if (!s) return renderHub(w);
+  sub = 'stats';
+  App.replaceState({ sub: 'stats' });
   state = null;
   var secs = Math.round((Date.now() - s.started) / 1000);
   App.G.examHist.push({ date: Date.now(), score: s.ok, total: s.qs.length, secs: secs, scheme: App.S.scheme, level: App.S.level });

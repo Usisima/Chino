@@ -6,6 +6,8 @@
 var q = '', radFilter = null, histTimer = null;
 
 App.views.dict = function () {
+  // al entrar en la sección se reinician los filtros (búsqueda y radical)
+  q = ''; radFilter = null;
   var w = App.$('dict-wrap');
   w.innerHTML = '';
   w.appendChild(App.el('p', 'page-title', '<span class="zh">词典</span> · Diccionario'));
@@ -36,13 +38,19 @@ App.views.dict = function () {
     if (q.trim().length > 1) histTimer = setTimeout(function () { App.pushHist(q); }, 1600);
   });
 
+  /* gesto de regresar: primero quita el filtro de radical, luego sale de la sección */
+  App.viewBack.dict = function () {
+    if (radFilter) { radFilter = null; refresh(); return true; }
+    return false;
+  };
+
   function refresh() {
     App.ready.then(function () {
       if (App.currentView !== 'dict') return;
       results.innerHTML = '';
       if (radFilter) {
         var head = App.el('div', 'count-line', 'Radical <span style="font-family:var(--hanzi);color:var(--gold)">' + App.esc(radFilter) + '</span> · <span data-a="quit" style="color:var(--gold2);cursor:pointer">quitar filtro ✕</span>');
-        head.querySelector('[data-a="quit"]').onclick = function () { radFilter = null; refresh(); };
+        head.querySelector('[data-a="quit"]').onclick = function () { history.back(); };
         results.appendChild(head);
       }
       if (!q.trim() && !radFilter) return renderIdle(results);
@@ -65,8 +73,8 @@ App.views.dict = function () {
     box.appendChild(App.el('p', 'section-title', 'Buscar por radical · ' + App.RADS.length));
     var radBox = App.el('div', 'rad-grid');
     App.RADS.forEach(function (r) {
-      var c = App.el('button', 'chip', '<span style="font-family:var(--hanzi)">' + App.esc(r[0]) + '</span><span class="n">' + r[1] + '</span>');
-      c.onclick = function () { radFilter = r[0]; refresh(); };
+      var c = App.el('button', 'chip', '<span style="font-family:var(--hanzi)">' + App.esc(r[0]) + '</span>');
+      c.onclick = function () { radFilter = r[0]; App.pushState({ sub: 'rad' }); refresh(); };
       radBox.appendChild(c);
     });
     box.appendChild(radBox);

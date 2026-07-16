@@ -4,6 +4,15 @@
 (function () {
 
 var sState = null;
+var sub = 'hub';   // 'hub' | 'round' | 'stats'
+
+/* gesto de regresar: trazado → estadísticas → hub → (sale de la sección) */
+App.viewBack.strokes = function () {
+  var w = App.$('strokes-wrap');
+  if (sub === 'round') { renderStats(w, true); return true; }
+  if (sub === 'stats') { renderHub(w); return true; }
+  return false;
+};
 
 App.views.strokes = function () {
   var w = App.$('strokes-wrap');
@@ -38,6 +47,7 @@ function levelChars() {
 /* ---------- hub ---------- */
 function renderHub(w) {
   clearBelow(w);
+  sub = 'hub'; sState = null;
 
   var lvlRow = App.el('div', 'select-row');
   lvlRow.innerHTML = '<label>Nivel HSK ' + (App.S.scheme === 'new' ? '3.0' : '2.0') + '</label>';
@@ -76,10 +86,12 @@ function renderHub(w) {
 /* ---------- sesión de trazado (infinita) ---------- */
 function startSession(deck, startIdx) {
   sState = { deck: deck, i: startIdx || 0, ok: 0, bad: 0, seen: 0, started: Date.now(), name: 'Trazos' };
+  App.pushState({ sub: 'round' });
 }
 
 function renderTrace(w) {
   clearBelow(w);
+  sub = 'round';
   var s = sState;
   if (!s) return renderHub(w);
   if (s.i >= s.deck.length) s.i = 0; // ronda infinita
@@ -160,8 +172,10 @@ function renderTrace(w) {
   w.appendChild(fin);
 }
 
-function renderStats(w) {
+function renderStats(w, viaBack) {
   clearBelow(w);
+  sub = 'stats';
+  if (viaBack) App.pushState({ sub: 'stats' }); else App.replaceState({ sub: 'stats' });
   var s = sState;
   sState = null;
   if (!s) return renderHub(w);

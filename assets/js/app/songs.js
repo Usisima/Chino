@@ -105,6 +105,13 @@ var MELODIES = {
 
 var player = { playing: false };
 var actx = null, melTimers = [];
+var sub = 'list';   // 'list' | 'song'
+
+/* gesto de regresar: canción → lista → (sale de la sección) */
+App.viewBack.songs = function () {
+  if (sub === 'song') { renderList(App.$('songs-wrap')); return true; }
+  return false;
+};
 function playIcon(playing) {
   return playing
     ? '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>'
@@ -166,6 +173,7 @@ App.views.songs = function () {
 
 function renderList(w) {
   stopPlay();
+  sub = 'list';
   while (w.children.length > 2) w.removeChild(w.lastChild);
   w.appendChild(App.el('p', 'hint', 'Elige una canción, escucha la pronunciación y marca los caracteres que ya sabes leer.'));
 
@@ -179,18 +187,19 @@ function renderList(w) {
         '<div class="song-count">' + kn + ' / ' + total + ' caracteres que sabes leer</div>' +
       '</div>' +
       '<svg class="song-arrow" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg>');
-    card.onclick = function () { renderSong(w, song); };
+    card.onclick = function () { App.pushState({ sub: 'song' }); renderSong(w, song); };
     w.appendChild(card);
   });
 }
 
 function renderSong(w, song) {
   stopPlay();
+  sub = 'song';
   while (w.children.length > 2) w.removeChild(w.lastChild);
 
   var back = App.el('button', 'btn btn-sm', '‹ Canciones');
   back.style.margin = '0 auto 0.7rem 0';
-  back.onclick = function () { renderList(w); };
+  back.onclick = function () { history.back(); };   // usa el historial, como el gesto
   w.appendChild(back);
 
   var playerEl = App.el('div', 'player',

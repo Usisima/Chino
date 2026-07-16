@@ -537,9 +537,17 @@ function ovRender() {
 App.openOverlay = function (title, render) {
   ovStack.push({ title: title, render: render });
   ovRender();
+  App.pushState();               // una entrada de historial por ficha abierta
 };
-App.closeOverlay = function () { ovStack.pop(); ovRender(); };
-App.closeAllOverlays = function () { ovStack = []; ovRender(); };
+/* cerrar = retroceder, para que el historial no se desincronice */
+App.closeOverlay = function () {
+  if (ovStack.length) history.back(); else ovRender();
+};
+App.closeAllOverlays = function () {
+  var n = ovStack.length;
+  if (n) history.go(-n); else ovRender();
+};
+App.overlayDepth = function () { return ovStack.length; };
 
 /* ---------- ficha de palabra ---------- */
 App.openWord = function (w) {
@@ -765,7 +773,12 @@ function addToListDialog(w) {
 /* ---------- navegación ---------- */
 App.views = {};
 App.currentView = 'home';
-App.goto = function (name) {
+/* cada sección puede registrar App.viewBack[nombre] = fn(estado)
+   y devolver true para consumir el gesto de regresar (p. ej. ronda → estadísticas) */
+App.viewBack = {};
+var navSeq = 0;
+
+function applyView(name) {
   App.currentView = name;
   document.querySelectorAll('#main > .view').forEach(function (sec) {
     sec.classList.toggle('active', sec.id === 'view-' + name);
@@ -774,5 +787,43 @@ App.goto = function (name) {
     b.classList.toggle('active', b.getAttribute('data-goto') === name);
   });
   if (App.views[name]) App.views[name]();
-  try { history.replaceState(null, '', '#' + name); } catch (e) {}
+}
+
+/* ---------- historial ---------- */
+App.navState = function (extra) {
+  var st = { v: App.currentView, ov: ovStack.length, s: ++navSeq };
+  if (extra) for (var k in extra) st[k] = extra[k];
+  return st;
 };
+App.pushState = function (extra) {
+  try { history.pushState(App.navState(extra), '', '#' + App.currentView); } catch (e) {}
+};
+App.replaceState = function (extra) {
+  try { history.replaceState(App.navState(extra), '', '#' + App.currentView); } catch (e) {}
+};
+
+App.goto = function (name, replace) {
+  // al cambiar de sección se cierran las fichas abiertas
+  if (ovStack.length) { ovStack.length = 0; ovRender(); }
+  if (name === App.currentView && !replace) { applyView(name); return; }
+  applyView(name);
+  if (replace) App.replaceState({ sub: 'base' });
+  else App.pushState({ sub: 'base' });
+};
+App.gotoSilent = function (name) { applyView(name); };
+
+window.addEventListener('popstate', function (e) {
+  var st = e.state || { v: App.currentView, ov: 0 };
+  // 1) hay fichas abiertas de más → cerrar una
+  var targetOv = st.ov || 0;
+  if (ovStack.length > targetOv) {
+    while (ovStack.length > targetOv) ovStack.pop();
+    ovRender();
+    return;
+  }
+  // 2) la sección actual puede consumir el gesto
+  var h = App.viewBack[App.currentView];
+  if (h && h(st)) return;
+  // 3) cambiar de sección
+  if (st.v && st.v !== App.currentView) App.gotoSilent(st.v);
+});

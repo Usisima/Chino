@@ -760,6 +760,31 @@ select option { background: var(--surface); color: var(--ink); }
 .m-tile.hidden-face::after { content: '中'; font-family: var(--hanzi); color: var(--ink3); font-size: 1.3rem; }
 @keyframes shake { 0%,100% { transform: none; } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 
+/* Mahjong */
+.mj-diffs { display: flex; gap: 0.4rem; justify-content: center; margin: 0.15rem 0 0.85rem; }
+.mj-board { position: relative; width: 100%; margin: 0 auto; container-type: inline-size; user-select: none; -webkit-user-select: none; }
+.mj-tile {
+  position: absolute; padding: 0; border: 1px solid var(--border2); border-radius: 9px;
+  background: linear-gradient(155deg, var(--surface) 55%, var(--surface2));
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.2), 3px 6px 9px rgba(0, 0, 0, 0.16);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink); line-height: 1.1; cursor: pointer;
+  transition: opacity 0.3s, transform 0.3s, border-color 0.15s, background 0.15s;
+}
+.mj-tile.blocked { cursor: default; }
+.mj-tile.blocked::after { content: ''; position: absolute; inset: -1px; border-radius: inherit; background: rgba(0, 0, 0, 0.16); }
+.mj-tile.sel { border-color: var(--gold); background: var(--brand-soft); box-shadow: 0 0 0 2px var(--gold), 2px 3px 0 rgba(0, 0, 0, 0.2); }
+.mj-tile.hint { border-color: var(--amber, #E7961F); box-shadow: 0 0 0 2px var(--amber, #E7961F), 2px 3px 0 rgba(0, 0, 0, 0.2); animation: mjPulse 0.6s ease-in-out 2; }
+.mj-tile.err { border-color: var(--red); background: var(--red-soft); animation: shake 0.3s; }
+.mj-tile.out { opacity: 0; transform: scale(0.35) rotate(10deg); pointer-events: none; }
+.mj-zh { font-family: var(--hanzi); text-align: center; padding: 0 3px; }
+.mj-zh.n1 { font-size: 0.5em; } .mj-zh.n2 { font-size: 0.38em; } .mj-zh.n3 { font-size: 0.29em; } .mj-zh.n4 { font-size: 0.25em; }
+.mj-emoji { font-size: 0.48em; }
+.mj-caption { text-align: center; margin-top: 0.85rem; font-size: 0.78rem; color: var(--ink2); min-height: 1.3em; }
+.mj-caption .zh { font-family: var(--hanzi); font-size: 0.95rem; color: var(--ink); }
+.mj-cap-e { font-size: 0.95rem; }
+@keyframes mjPulse { 50% { transform: scale(1.07); } }
+
 /* Escritura */
 .writer-box {
   width: min(78vw, 300px); height: min(78vw, 300px);

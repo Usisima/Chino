@@ -4,6 +4,14 @@
 (function () {
 
 var session = null; // {type:'srs'|'new'|'free', deck, i, ok, bad, neu}
+var sub = 'menu';   // 'menu' | 'session' | 'done'
+
+/* gesto de regresar: sesión/resumen → menú → (sale de la sección) */
+App.viewBack.learn = function () {
+  var w = App.$('learn-wrap');
+  if (sub === 'session' || sub === 'done') { session = null; renderMenu(w); return true; }
+  return false;
+};
 
 App.views.learn = function () {
   var w = App.$('learn-wrap');
@@ -21,6 +29,7 @@ function clearBelowTitle(w) { while (w.children.length > 2) w.removeChild(w.last
 /* ---------- menú ---------- */
 function renderMenu(w) {
   clearBelowTitle(w);
+  sub = 'menu';
   session = null;
 
   /* esquema HSK */
@@ -128,6 +137,9 @@ function browseLevel(pool) {
 /* ---------- sesiones ---------- */
 function startSession(type, deck) {
   session = { type: type, deck: deck.slice(), i: 0, ok: 0, bad: 0, neu: 0 };
+  // entrada de historial solo si ya estamos en Aprender (si venimos de otra
+  // sección, la entrada la crea App.goto('learn'))
+  if (App.currentView === 'learn') App.pushState({ sub: 'session' });
 }
 
 /* estudiar un mazo arbitrario (listas, favoritos) como flashcards libres */
@@ -138,6 +150,7 @@ App.studyDeck = function (deck) {
 
 function renderSession(w) {
   clearBelowTitle(w);
+  sub = 'session';
   var s = session;
   if (!s) return renderMenu(w);
 
@@ -210,6 +223,8 @@ function renderSession(w) {
 }
 
 function renderDone(w) {
+  sub = 'done';
+  App.replaceState({ sub: 'done' });
   var s = session;
   session = null;
   var pct = (s.ok + s.bad) ? Math.round(s.ok / (s.ok + s.bad) * 100) : 100;
