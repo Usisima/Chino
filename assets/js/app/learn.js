@@ -1,17 +1,68 @@
 'use strict';
 
-/* ==================== APRENDER: SRS + flashcards ==================== */
+/* ==================== APRENDER: vocabulario por temas (HSK 3.0) ==================== */
 (function () {
 
-var session = null; // {type:'srs'|'new'|'free', deck, i, ok, bad, neu}
-var sub = 'menu';   // 'menu' | 'session' | 'done'
+/* normaliza texto para emparejar (minúsculas, sin acentos, conserva espacios) */
+function norm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
 
-/* gesto de regresar: sesión/resumen → menú → (sale de la sección) */
-App.viewBack.learn = function () {
-  var w = App.$('learn-wrap');
-  if (sub === 'session' || sub === 'done') { session = null; renderMenu(w); return true; }
-  return false;
-};
+/* ---------- temas por palabras clave (español) ---------- */
+var TOPICS = [
+  { id: 'animales', ico: '🐾', name: 'Animales', kw: ['animal','gato','perro','pajaro','ave','pez','pescado','caballo','vaca','buey','oveja','cabra','cerdo','cochino','pollo','gallina','pato','conejo','tigre','leon','oso','mono','serpiente','dragon','raton','rata','elefante','lobo','insecto','mosca','mosquito','abeja','mariposa','tortuga','rana','panda','ganso'] },
+  { id: 'comida', ico: '🍜', name: 'Comida y bebida', kw: ['comer','comida','beber','bebida','arroz','fideo','pan','carne','huevo','verdura','fruta','manzana','platano','naranja','sandia','uva','sopa','te','cafe','leche','agua','vino','cerveza','azucar','sal','aceite','sabor','dulce','picante','restaurante','hambre','sed','desayuno','almuerzo','cena','plato','galleta','pastel','helado','chocolate','tofu','jugo'] },
+  { id: 'familia', ico: '👪', name: 'Familia y personas', kw: ['familia','padre','madre','papa','mama','hijo','hija','hermano','hermana','abuelo','abuela','esposo','esposa','marido','nino','nina','bebe','amigo','persona','gente','senor','senora','tio','tia','primo','novio','novia','hombre','mujer','companero','vecino'] },
+  { id: 'cuerpo', ico: '🧍', name: 'Cuerpo', kw: ['cuerpo','cabeza','cara','ojo','oreja','oido','nariz','boca','diente','mano','pie','pierna','brazo','dedo','corazon','pelo','cabello','estomago','sangre','piel','hueso','rostro','hombro'] },
+  { id: 'colores', ico: '🎨', name: 'Colores', kw: ['color','rojo','azul','verde','amarillo','negro','blanco','gris','rosa','morado','purpura','marron','dorado','plateado'] },
+  { id: 'naturaleza', ico: '🌿', name: 'Naturaleza y clima', kw: ['naturaleza','sol','luna','estrella','cielo','nube','lluvia','nieve','viento','fuego','montana','rio','mar','oceano','arbol','flor','hierba','hoja','tierra','piedra','bosque','lago','playa','planta','clima','nublado','soleado','trueno','tormenta'] },
+  { id: 'ropa', ico: '👕', name: 'Ropa', kw: ['ropa','camisa','pantalon','falda','vestido','zapato','sombrero','calcetin','abrigo','chaqueta','bufanda','guante','cinturon','gafas','lentes','traje','uniforme'] },
+  { id: 'transporte', ico: '🚗', name: 'Transporte', kw: ['coche','carro','auto','autobus','tren','avion','barco','bicicleta','metro','taxi','moto','motocicleta','camion','transporte','conducir','manejar','viajar','viaje','estacion','aeropuerto','boleto','billete','pasajero'] },
+  { id: 'casa', ico: '🏠', name: 'Casa y objetos', kw: ['casa','hogar','habitacion','cuarto','puerta','ventana','mesa','silla','cama','sofa','lampara','telefono','computadora','ordenador','television','reloj','libro','papel','lapiz','boligrafo','llave','dinero','bolsa','caja','espejo','cocina','bano','mueble','cuchillo','cuchara','tenedor','plato','taza','vaso'] },
+  { id: 'lugares', ico: '🗺️', name: 'Lugares y países', kw: ['pais','ciudad','pueblo','lugar','calle','escuela','universidad','hospital','banco','tienda','mercado','oficina','parque','biblioteca','hotel','china','estados unidos','america','japon','mundo','mapa','direccion','camino','norte','sur','este','oeste','pekin','extranjero'] },
+  { id: 'tiempo', ico: '📅', name: 'Tiempo y calendario', kw: ['hora','minuto','segundo','dia','semana','mes','ano','hoy','manana','ayer','ahora','temprano','tarde','noche','mediodia','fecha','calendario','momento','lunes','martes','miercoles','jueves','viernes','sabado','domingo','estacion del ano','primavera','verano','otono','invierno'] },
+  { id: 'emociones', ico: '😊', name: 'Emociones', kw: ['feliz','contento','triste','enojado','enfadado','miedo','amor','amar','gustar','odiar','alegria','emocion','sentir','cansado','preocupado','sorpresa','reir','llorar','sonreir','nervioso','tranquilo','aburrido','enamorado'] },
+  { id: 'estudio', ico: '📚', name: 'Estudio y trabajo', kw: ['estudiar','aprender','ensenar','escuela','clase','profesor','maestro','alumno','estudiante','examen','tarea','libro','leer','escribir','palabra','pregunta','respuesta','trabajo','trabajar','oficina','empresa','jefe','reunion','proyecto','negocio','profesion'] },
+  { id: 'saludos', ico: '💬', name: 'Saludos y expresiones', kw: ['hola','adios','gracias','por favor','perdon','disculpa','saludo','expresion','bienvenido','felicidades','buenos dias','buenas noches','de nada','lo siento'] }
+];
+
+/* categorías gramaticales (por códigos de w.pos) */
+var GRAMMAR = [
+  { id: 'v', ico: '跑', name: 'Verbos', pos: ['v', 'vn'] },
+  { id: 'n', ico: '名', name: 'Sustantivos', pos: ['n', 'nz', 'ns', 'nr', 'nt', 't', 's'] },
+  { id: 'a', ico: '好', name: 'Adjetivos', pos: ['a', 'z', 'b'] },
+  { id: 'd', ico: '很', name: 'Adverbios', pos: ['d'] },
+  { id: 'q', ico: '个', name: 'Clasificadores', pos: ['q'] },
+  { id: 'r', ico: '你', name: 'Pronombres', pos: ['r'] },
+  { id: 'm', ico: '三', name: 'Numerales', pos: ['m'] },
+  { id: 'p', ico: '在', name: 'Preposiciones', pos: ['p'] },
+  { id: 'c', ico: '和', name: 'Conjunciones', pos: ['c'] },
+  { id: 'u', ico: '了', name: 'Partículas', pos: ['u', 'y'] },
+  { id: 'e', ico: '啊', name: 'Interjecciones', pos: ['e', 'o'] }
+];
+
+/* índice memoizado: id de categoría -> [palabras] (solo HSK 3.0) */
+var index = null;
+function buildIndex() {
+  if (index) return index;
+  index = {};
+  TOPICS.concat(GRAMMAR).forEach(function (c) { index[c.id] = []; });
+  var res = TOPICS.map(function (t) {
+    return { id: t.id, re: new RegExp('\\b(' + t.kw.map(function (k) { return k.replace(/ /g, '\\s'); }).join('|') + ')', 'i') };
+  });
+  App.W.forEach(function (word) {
+    if (!word.l3) return;   // estándar HSK 3.0
+    var g = norm(word.es || word.en);
+    res.forEach(function (t) { if (t.re.test(g)) index[t.id].push(word); });
+    var codes = (word.pos || '').split(',').map(function (p) { return p.trim().toLowerCase(); });
+    GRAMMAR.forEach(function (gr) {
+      if (codes.some(function (c) { return gr.pos.indexOf(c) >= 0; })) index[gr.id].push(word);
+    });
+  });
+  return index;
+}
+
+App.viewBack.learn = function () { return false; };
 
 App.views.learn = function () {
   var w = App.$('learn-wrap');
@@ -20,228 +71,73 @@ App.views.learn = function () {
   w.appendChild(App.el('div', 'title-divider'));
   App.ready.then(function () {
     if (App.currentView !== 'learn') return;
-    if (session) renderSession(w); else renderMenu(w);
+    render(w);
   });
 };
 
-function clearBelowTitle(w) { while (w.children.length > 2) w.removeChild(w.lastChild); }
+function render(w) {
+  while (w.children.length > 2) w.removeChild(w.lastChild);
+  var idx = buildIndex();
 
-/* ---------- menú ---------- */
-function renderMenu(w) {
-  clearBelowTitle(w);
-  sub = 'menu';
-  session = null;
+  w.appendChild(App.el('p', 'hint', 'Explora el vocabulario HSK 3.0 agrupado por temas. Toca un grupo para ver y estudiar sus palabras.'));
 
-  /* esquema HSK */
-  var seg = App.el('div', 'seg');
-  [['new', 'HSK 3.0 (2021)'], ['old', 'HSK 2.0 (clásico)']].forEach(function (s) {
-    var b = App.el('button', App.S.scheme === s[0] ? 'active' : '', s[1]);
-    b.onclick = function () {
-      App.S.scheme = s[0];
-      if (App.S.scheme === 'old' && App.S.level > 6) App.S.level = 6;
-      App.saveS(); renderMenu(w);
-    };
-    seg.appendChild(b);
+  w.appendChild(App.el('p', 'section-title', 'Vocabulario por tema'));
+  var tg = App.el('div', 'cat-grid');
+  TOPICS.forEach(function (t) {
+    var n = idx[t.id].length;
+    if (!n) return;
+    var c = App.el('button', 'cat-card',
+      '<span class="cat-ico">' + t.ico + '</span>' +
+      '<span class="cat-name">' + t.name + '</span>' +
+      '<span class="cat-count">' + n + '</span>');
+    c.onclick = function () { openCat(t.name + ' ' + t.ico, idx[t.id]); };
+    tg.appendChild(c);
   });
-  w.appendChild(seg);
+  w.appendChild(tg);
 
-  /* niveles */
-  var grid = App.el('div', 'lvl-grid');
-  App.LEVELS[App.S.scheme].forEach(function (l) {
-    var k = App.knownInLevel(App.S.scheme, l);
-    var tile = App.el('div', 'lvl-tile' + (App.S.level === l ? ' active' : ''),
-      '<div class="lvl-num">' + App.lvlName(App.S.scheme, l) + '</div>' +
-      '<div class="lvl-count">' + k.seen + '/' + k.total + '</div>' +
-      '<div class="lvl-mini-bar"><div class="lvl-mini-fill" style="width:' + (k.total ? Math.round(k.seen / k.total * 100) : 0) + '%"></div></div>');
-    tile.onclick = function () { App.S.level = l; App.saveS(); renderMenu(w); };
-    grid.appendChild(tile);
+  w.appendChild(App.el('p', 'section-title', 'Por categoría gramatical'));
+  var gg = App.el('div', 'cat-grid');
+  GRAMMAR.forEach(function (gr) {
+    var n = idx[gr.id].length;
+    if (!n) return;
+    var c = App.el('button', 'cat-card',
+      '<span class="cat-ico zh">' + gr.ico + '</span>' +
+      '<span class="cat-name">' + gr.name + '</span>' +
+      '<span class="cat-count">' + n + '</span>');
+    c.onclick = function () { openCat(gr.name, idx[gr.id]); };
+    gg.appendChild(c);
   });
-  w.appendChild(grid);
-
-  var pool = App.levelWords(App.S.scheme, App.S.level);
-  var due = App.srsDue();
-  var dueLvl = App.srsDue(pool);
-  var news = App.srsNew(pool, 10);
-
-  w.appendChild(App.el('p', 'section-title', 'Repaso espaciado (SRS)'));
-
-  var cardRev = modeCard('复', due.length ? 'Repasar · ' + due.length + ' pendientes' : 'Repasar', 'Todas las palabras cuyo repaso toca hoy' + (dueLvl.length ? ' (' + dueLvl.length + ' de este nivel)' : ''));
-  cardRev.onclick = function () {
-    if (!due.length) { App.toast('No hay repasos pendientes 🎉'); return; }
-    startSession('srs', App.shuffle(due.slice(0, 40)));
-    renderSession(w);
-  };
-  w.appendChild(cardRev);
-
-  var cardNew = modeCard('新', 'Palabras nuevas', news.length ? 'Aprende 10 palabras nuevas del nivel ' + App.lvlName(App.S.scheme, App.S.level) : 'Ya estudiaste todas las de este nivel');
-  cardNew.onclick = function () {
-    if (!news.length) { App.toast('Nivel completo ✓'); return; }
-    startSession('new', news);
-    renderSession(w);
-  };
-  w.appendChild(cardNew);
-
-  w.appendChild(App.el('p', 'section-title', 'Estudio libre'));
-
-  var cardFree = modeCard('卡', 'Flashcards libres', 'Sesión de 15 tarjetas del nivel, sin afectar el SRS');
-  cardFree.onclick = function () {
-    if (!pool.length) { App.toast('Este nivel no tiene palabras'); return; }
-    startSession('free', App.sample(pool, 15));
-    renderSession(w);
-  };
-  w.appendChild(cardFree);
-
-  var cardBrowse = modeCard('词', 'Vocabulario del nivel', pool.length + ' palabras del nivel ' + App.lvlName(App.S.scheme, App.S.level));
-  cardBrowse.onclick = function () { browseLevel(pool); };
-  w.appendChild(cardBrowse);
-
-  w.appendChild(App.el('p', 'section-title', 'Lecciones'));
-  var les = App.el('div', 'card',
-    '<div style="display:flex;align-items:center;gap:1rem">' +
-      '<div class="mode-icon">课</div>' +
-      '<div class="mode-info"><div class="mode-name">Lecciones estructuradas</div>' +
-      '<div class="mode-desc">Vocabulario + gramática + comprensión por unidades · <b style="color:var(--gold2)">próximamente</b></div></div>' +
-    '</div>');
-  w.appendChild(les);
+  w.appendChild(gg);
 }
 
-function modeCard(zh, name, desc) {
-  var c = App.el('div', 'mode-card');
-  c.innerHTML =
-    '<div class="mode-icon">' + zh + '</div>' +
-    '<div class="mode-info"><div class="mode-name">' + name + '</div><div class="mode-desc">' + desc + '</div></div>' +
-    '<svg class="mode-arrow" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg>';
-  return c;
-}
-
-function browseLevel(pool) {
-  App.openOverlay('Nivel ' + App.lvlName(App.S.scheme, App.S.level) + ' · ' + pool.length + ' palabras', function (body) {
+/* lista de palabras de una categoría, con opción de estudiar */
+function openCat(title, words) {
+  words = words.slice().sort(function (a, b) { return (a.freq || 9e9) - (b.freq || 9e9); });
+  App.openOverlay(title + ' · ' + words.length, function (body) {
+    if (words.length >= 2) {
+      var st = App.el('button', 'btn btn-jade', '<svg viewBox="0 0 24 24"><use href="#icon-cards"/></svg>Estudiar con flashcards');
+      st.style.margin = '0 auto 0.8rem';
+      st.onclick = function () {
+        App.closeAllOverlays();
+        App.studyDeck(App.shuffle(words.slice()).slice(0, 20));
+      };
+      body.appendChild(st);
+    }
     var shown = 0;
     var listEl = App.el('div');
     body.appendChild(listEl);
-    function more() {
-      var next = pool.slice(shown, shown + 100);
-      next.forEach(function (word) { listEl.appendChild(App.wordRow(word)); });
-      shown += next.length;
-      btn.style.display = shown < pool.length ? 'flex' : 'none';
-      btn.textContent = 'Mostrar más (' + (pool.length - shown) + ' restantes)';
-    }
     var btn = App.el('button', 'btn');
     btn.style.margin = '0.6rem auto';
+    function more() {
+      words.slice(shown, shown + 80).forEach(function (word) { listEl.appendChild(App.wordRow(word)); });
+      shown = Math.min(words.length, shown + 80);
+      btn.style.display = shown < words.length ? 'flex' : 'none';
+      btn.textContent = 'Mostrar más (' + (words.length - shown) + ')';
+    }
     btn.onclick = more;
     body.appendChild(btn);
     more();
   });
-}
-
-/* ---------- sesiones ---------- */
-function startSession(type, deck) {
-  session = { type: type, deck: deck.slice(), i: 0, ok: 0, bad: 0, neu: 0 };
-  // entrada de historial solo si ya estamos en Aprender (si venimos de otra
-  // sección, la entrada la crea App.goto('learn'))
-  if (App.currentView === 'learn') App.pushState({ sub: 'session' });
-}
-
-/* estudiar un mazo arbitrario (listas, favoritos) como flashcards libres */
-App.studyDeck = function (deck) {
-  startSession('free', deck);
-  App.goto('learn');
-};
-
-function renderSession(w) {
-  clearBelowTitle(w);
-  sub = 'session';
-  var s = session;
-  if (!s) return renderMenu(w);
-
-  if (s.i >= s.deck.length) return renderDone(w);
-
-  var word = s.deck[s.i];
-  var title = { srs: 'Repaso', new: 'Palabras nuevas', free: 'Flashcards' }[s.type];
-
-  var meta = App.el('div', 'fc-meta',
-    '<span class="fc-count">' + title + ' · ' + (s.i + 1) + ' / ' + s.deck.length + '</span>' +
-    '<span class="fc-cat-tag">' + (App.lvlTag(word) || '') + '</span>');
-  w.appendChild(meta);
-
-  var scene = App.el('div', 'fc-scene');
-  var card = App.el('div', 'fc-card');
-  var roman = App.esc(App.roman(word));
-  card.innerHTML =
-    '<div class="fc-face fc-front">' +
-      '<span class="fc-hanzi">' + App.dispTone(word) + '</span>' +
-      (s.type === 'new' ? '<span class="fc-pinyin">' + roman + '</span>' : '') +
-      '<span class="fc-tap">Toca para voltear</span>' +
-    '</div>' +
-    '<div class="fc-face fc-back">' +
-      '<span class="fc-hanzi">' + App.esc(App.disp(word)) + '</span>' +
-      '<span class="fc-pinyin">' + App.esc(word.p) + '</span>' +
-      (word.z && App.S.roman !== 'py' ? '<span class="fc-zhuyin">' + App.esc(word.z) + '</span>' : '') +
-      '<span class="fc-es">' + App.esc(word.es || word.en) + '</span>' +
-      '<button class="icon-btn" data-a="det" title="Ver ficha" style="margin-top:6px"><svg viewBox="0 0 24 24"><use href="#icon-search"/></svg></button>' +
-      '<span class="fc-tap">Toca para voltear</span>' +
-    '</div>';
-  card.onclick = function (ev) {
-    if (ev.target.closest('.icon-btn')) return;
-    card.classList.toggle('flip');
-    if (card.classList.contains('flip')) App.speak(App.disp(word));
-  };
-  card.querySelector('[data-a="det"]').onclick = function (e) { e.stopPropagation(); App.openWord(word); };
-  scene.appendChild(card);
-  w.appendChild(scene);
-
-  var actions = App.el('div', 'fc-actions');
-  var no = App.el('button', 'fc-btn fc-btn-no', s.type === 'new' ? 'Difícil' : 'Otra vez');
-  var si = App.el('button', 'fc-btn fc-btn-si', s.type === 'new' ? 'Entendida' : 'Bien');
-  no.onclick = function () {
-    s.bad++;
-    if (s.type !== 'free') App.srsReview(word, false);
-    // reintenta más adelante
-    var pos = Math.min(s.deck.length, s.i + 3 + Math.floor(Math.random() * 3));
-    s.deck.splice(pos, 0, word);
-    s.i++;
-    renderSession(w);
-  };
-  si.onclick = function () {
-    s.ok++;
-    if (s.type !== 'free') {
-      var wasNew = !App.srsGet(word.s);
-      App.srsReview(word, true);
-      if (wasNew) { s.neu++; App.day('neu', 1); }
-    }
-    s.i++;
-    renderSession(w);
-  };
-  actions.appendChild(no);
-  actions.appendChild(si);
-  w.appendChild(actions);
-
-  var quit = App.el('button', 'btn btn-sm', 'Terminar sesión');
-  quit.style.margin = '1rem auto 0';
-  quit.onclick = function () { session = null; renderMenu(w); };
-  w.appendChild(quit);
-}
-
-function renderDone(w) {
-  sub = 'done';
-  App.replaceState({ sub: 'done' });
-  var s = session;
-  session = null;
-  var pct = (s.ok + s.bad) ? Math.round(s.ok / (s.ok + s.bad) * 100) : 100;
-  App.mission('quiz', 1);
-  if (pct === 100 && s.ok >= 5) { App.G.perfect = 1; App.saveG(); App.checkBadges(); }
-
-  var d = App.el('div', 'done-card',
-    '<div class="done-zh">' + (pct >= 80 ? '很好!' : pct >= 50 ? '不错!' : '加油!') + '</div>' +
-    '<div class="done-title">Sesión terminada</div>' +
-    '<div class="done-sub">' + s.ok + ' bien · ' + s.bad + ' difíciles · ' + pct + '%' +
-    (s.neu ? '<br>' + s.neu + ' palabras nuevas en tu SRS' : '') + '</div>');
-  w.appendChild(d);
-
-  var again = App.el('button', 'btn btn-jade', 'Continuar');
-  again.style.margin = '0.9rem auto 0';
-  again.onclick = function () { renderMenu(w); };
-  w.appendChild(again);
 }
 
 })();

@@ -68,6 +68,10 @@ function render(w) {
   });
   w.appendChild(lvls);
 
+  /* precisión por palabra (rejilla coloreada) */
+  w.appendChild(App.el('p', 'section-title', 'Precisión por palabra · HSK 3.0'));
+  w.appendChild(accGridBlock());
+
   /* insignias */
   var won = Object.keys(App.G.badges).length;
   w.appendChild(App.el('p', 'section-title', 'Insignias · ' + won + '/' + App.BADGES.length));
@@ -150,6 +154,49 @@ function render(w) {
   dataRow.appendChild(exp); dataRow.appendChild(imp); dataRow.appendChild(rst);
   w.appendChild(dataRow);
   w.appendChild(App.el('p', 'hint', 'El progreso vive en este dispositivo (localStorage). Usa exportar/importar para pasarlo a otro dispositivo.'));
+}
+
+/* ---------- rejilla de precisión por palabra ----------
+   Cada celda es una palabra del nivel; su color depende de la precisión
+   (promedio de los últimos 15 intentos en juegos y práctica). */
+var accLevel = null;
+function accGridBlock() {
+  if (accLevel == null) accLevel = App.S.level;
+  var box = App.el('div', 'card');
+
+  var row = App.el('div', 'select-row');
+  row.style.marginBottom = '0.7rem';
+  row.innerHTML = '<label>Nivel</label>';
+  var sel = document.createElement('select');
+  App.LEVELS.new.forEach(function (l) { sel.appendChild(new Option('Nivel ' + App.lvlName('new', l), l)); });
+  sel.value = accLevel;
+  sel.onchange = function () { accLevel = +sel.value; App.views.profile(); };
+  row.appendChild(sel);
+  box.appendChild(row);
+
+  var words = App.levelWords('new', accLevel);
+  var withData = 0, sumPct = 0;
+  var grid = App.el('div', 'acc-grid');
+  words.forEach(function (word) {
+    var st = App.accStats(word.s);
+    var band = 'none';
+    if (st) {
+      withData++; sumPct += st.pct;
+      band = st.pct >= 80 ? 'hi' : st.pct >= 50 ? 'mid' : 'lo';
+    }
+    var cell = App.el('button', 'acc-cell acc-' + band, '<span class="zh">' + App.esc(App.disp(word)) + '</span>');
+    cell.title = App.disp(word) + ' · ' + (st ? st.pct + '% (' + st.ok + '/' + st.n + ')' : 'sin intentos');
+    cell.onclick = function () { App.openWord(word); };
+    grid.appendChild(cell);
+  });
+
+  var avg = withData ? Math.round(sumPct / withData) : 0;
+  var legend = App.el('div', 'acc-legend',
+    '<span>' + withData + ' de ' + words.length + ' practicadas' + (withData ? ' · media ' + avg + '%' : '') + '</span>' +
+    '<span class="acc-key"><i class="acc-hi"></i>≥80 <i class="acc-mid"></i>50–79 <i class="acc-lo"></i>&lt;50 <i class="acc-none"></i>sin datos</span>');
+  box.appendChild(legend);
+  box.appendChild(grid);
+  return box;
 }
 
 /* ---------- gráfica de barras HTML (una serie, 14 días) ---------- */

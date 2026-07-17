@@ -67,8 +67,23 @@ App.views.dict = function () {
     });
   }
 
-  /* estado inicial: radicales + favoritos + historial */
+  /* estado inicial: niveles HSK + radicales + favoritos + historial */
   function renderIdle(box) {
+    // vocabulario HSK 3.0 por nivel (contadores seleccionables)
+    box.appendChild(App.el('p', 'section-title', 'Vocabulario HSK 3.0 por nivel'));
+    var lg = App.el('div', 'lvl-grid');
+    App.LEVELS.new.forEach(function (l) {
+      var k = App.knownInLevel('new', l);
+      var pct = k.total ? Math.round(k.seen / k.total * 100) : 0;
+      var tile = App.el('button', 'lvl-tile',
+        '<div class="lvl-num">' + App.lvlName('new', l) + '</div>' +
+        '<div class="lvl-count">' + k.seen + '/' + k.total + '</div>' +
+        '<div class="lvl-mini-bar"><div class="lvl-mini-fill" style="width:' + pct + '%"></div></div>');
+      tile.onclick = function () { openLevel(l); };
+      lg.appendChild(tile);
+    });
+    box.appendChild(lg);
+
     // acceso por radical: siempre visibles todos
     box.appendChild(App.el('p', 'section-title', 'Buscar por radical · ' + App.RADS.length));
     var radBox = App.el('div', 'rad-grid');
@@ -111,6 +126,37 @@ App.views.dict = function () {
   }
 
   refresh();
+
+  /* todas las palabras de un nivel HSK 3.0, con opción de estudiar */
+  function openLevel(l) {
+    var words = App.levelWords('new', l);
+    words = words.slice().sort(function (a, b) { return (a.freq || 9e9) - (b.freq || 9e9); });
+    App.openOverlay('HSK 3.0 · Nivel ' + App.lvlName('new', l) + ' · ' + words.length, function (body) {
+      if (words.length >= 2) {
+        var st = App.el('button', 'btn btn-jade', '<svg viewBox="0 0 24 24"><use href="#icon-cards"/></svg>Estudiar con flashcards');
+        st.style.margin = '0 auto 0.8rem';
+        st.onclick = function () {
+          App.closeAllOverlays();
+          App.studyDeck(App.shuffle(words.slice()).slice(0, 20));
+        };
+        body.appendChild(st);
+      }
+      var shown = 0;
+      var listEl = App.el('div');
+      body.appendChild(listEl);
+      var btn = App.el('button', 'btn');
+      btn.style.margin = '0.6rem auto';
+      function more() {
+        words.slice(shown, shown + 80).forEach(function (word) { listEl.appendChild(App.wordRow(word)); });
+        shown = Math.min(words.length, shown + 80);
+        btn.style.display = shown < words.length ? 'flex' : 'none';
+        btn.textContent = 'Mostrar más (' + (words.length - shown) + ')';
+      }
+      btn.onclick = more;
+      body.appendChild(btn);
+      more();
+    });
+  }
 };
 
 })();

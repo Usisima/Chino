@@ -26,20 +26,35 @@
   window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(draw, 250); });
 })();
 
-/* splash (solo la primera vez) */
+/* splash (símbolo Ukishima con animación draw-on, cada vez que abre la app) */
 (function () {
   var intro = App.$('intro');
-  var seen = null;
-  try { seen = localStorage.getItem('hsk1_intro_v1') || localStorage.getItem('chino_intro'); } catch (e) {}
-  if (seen) {
-    if (intro.parentNode) intro.parentNode.removeChild(intro);
-    return;
-  }
-  try { localStorage.setItem('chino_intro', '1'); } catch (e) {}
+  if (!intro) return;
+  var DELAYS = [0, 0.2, 0.35, 0.5, 0.65];
+  var DURS = [1.8, 1.3, 1.3, 1.1, 1.2];
+  var EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+  var endAt = 0;
+  intro.querySelectorAll('.intro-lp').forEach(function (p, i) {
+    var len = p.getTotalLength();
+    if (len < 10) { p.style.display = 'none'; return; }
+    p.style.strokeDasharray = len;
+    p.style.strokeDashoffset = len;
+    var delay = DELAYS[i] != null ? DELAYS[i] : i * 0.2;
+    var dur = DURS[i] != null ? DURS[i] : 1.2;
+    var fillDelay = delay + dur;
+    var fadeDelay = fillDelay + 0.5;
+    p.style.animation = [
+      'introDraw ' + dur + 's ' + EASE + ' ' + delay + 's forwards',
+      'introFill 0.5s ease ' + fillDelay + 's forwards',
+      'introStrokeFade 0.3s ease ' + fadeDelay + 's forwards'
+    ].join(', ');
+    endAt = Math.max(endAt, fadeDelay + 0.3);
+  });
+  var hold = Math.max(endAt * 1000, 2600) + 550;   // deja leer el nombre un instante
   setTimeout(function () {
     intro.classList.add('intro-hide');
-    setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 750);
-  }, 3100);
+    setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 650);
+  }, hold);
 })();
 
 /* navegación */

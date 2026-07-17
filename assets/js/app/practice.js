@@ -6,6 +6,7 @@
 var state = null;   // sesión activa
 var timerId = null;
 var sub = 'hub';    // subpantalla: 'hub' | 'round' | 'stats' (para el gesto de regresar)
+var pendingFlash = null;   // mazo a estudiar al entrar (desde listas / favoritos)
 
 function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
 
@@ -34,8 +35,15 @@ App.views.practice = function () {
   App.ready.then(function () {
     if (App.currentView !== 'practice') return;
     state = null;
-    renderHub(w);
+    if (pendingFlash) { var deck = pendingFlash; pendingFlash = null; startFlash(w, 'free', deck); }
+    else renderHub(w);
   });
+};
+
+/* estudiar un mazo arbitrario (listas, favoritos) como flashcards en Práctica */
+App.studyDeck = function (deck) {
+  pendingFlash = deck.slice();
+  App.goto('practice');
 };
 
 function clearBelow(w) { stopTimer(); while (w.children.length > 2) w.removeChild(w.lastChild); }
@@ -110,7 +118,7 @@ function renderHub(w) {
   sub = 'hub'; state = null;
 
   var lvlRow = App.el('div', 'select-row');
-  lvlRow.innerHTML = '<label>Nivel HSK ' + (App.S.scheme === 'new' ? '3.0' : '2.0') + '</label>';
+  lvlRow.innerHTML = '<label>Nivel HSK 3.0</label>';
   var sel = document.createElement('select');
   App.LEVELS[App.S.scheme].forEach(function (l) {
     sel.appendChild(new Option('Nivel ' + App.lvlName(App.S.scheme, l), l));
@@ -119,6 +127,25 @@ function renderHub(w) {
   sel.onchange = function () { App.S.level = +sel.value; App.saveS(); };
   lvlRow.appendChild(sel);
   w.appendChild(lvlRow);
+
+  /* Tarjetas / repaso espaciado (movido desde Aprender) */
+  w.appendChild(App.el('p', 'section-title', 'Tarjetas'));
+  var due = App.srsDue();
+  var pool = App.levelWords(App.S.scheme, App.S.level);
+  var news = App.srsNew(pool, 10);
+  hubCard(w, '复', due.length ? 'Repaso · ' + due.length + ' pendientes' : 'Repaso espaciado',
+    'Repasa con tarjetas las palabras que tocan hoy', function () {
+      if (!due.length) { App.toast('No hay repasos pendientes 🎉'); return; }
+      startFlash(w, 'srs', App.shuffle(due.slice(0, 40)));
+    });
+  hubCard(w, '新', 'Palabras nuevas', news.length ? 'Aprende 10 nuevas del nivel ' + App.lvlName(App.S.scheme, App.S.level) : 'Ya estudiaste todas las de este nivel', function () {
+    if (!news.length) { App.toast('Nivel completo ✓'); return; }
+    startFlash(w, 'new', news);
+  });
+  hubCard(w, '卡', 'Flashcards libres', '15 tarjetas del nivel, sin afectar el repaso', function () {
+    if (!pool.length) { App.toast('Este nivel no tiene palabras'); return; }
+    startFlash(w, 'free', App.sample(pool, 15));
+  });
 
   w.appendChild(App.el('p', 'section-title', 'Ejercicios'));
   hubCard(w, '读', 'Leer', 'Ve el hanzi y elige el significado', function () { startMC(w, 'read'); });
@@ -226,6 +253,7 @@ function renderInfMC(w) {
       s.seen++;
       if (right) s.ok++; else s.bad++;
       App.day(right ? 'ok' : 'bad', 1);
+      App.recordAttempt(word.s, right);
       if (right) App.xp(2);
       opts.querySelectorAll('.q-opt').forEach(function (x) { x.classList.add('off'); });
       b.classList.add(right ? 'ok' : 'bad');
@@ -338,6 +366,7 @@ function renderQ(w, onDone, extraTop) {
       var right = o.s === word.s;
       if (right) s.ok++;
       App.day(right ? 'ok' : 'bad', 1);
+      App.recordAttempt(word.s, right);
       App.xp(right ? 2 : 0);
       opts.querySelectorAll('.q-opt').forEach(function (x) { x.classList.add('off'); });
       b.classList.add(right ? 'ok' : 'bad');
@@ -375,6 +404,90 @@ function renderResults(w, ok, total, kind) {
   b.style.margin = '0.9rem auto 0';
   b.onclick = function () { history.back(); };   // consume la entrada de la ronda
   w.appendChild(b);
+}
+
+/* ---------- flashcards (movidas desde Aprender) ---------- */
+function startFlash(w, type, deck) {
+  state = {
+    flash: true, type: type, deck: deck.slice(), i: 0, ok: 0, bad: 0, seen: 0, neu: 0,
+    name: { srs: 'Repaso', new: 'Palabras nuevas', free: 'Flashcards' }[type] || 'Flashcards',
+    started: Date.now()
+  };
+  state.again = function (ww) {
+    var p = App.levelWords(App.S.scheme, App.S.level);
+    if (type === 'srs') { var due = App.srsDue(); if (!due.length) return renderHub(ww); startFlash(ww, 'srs', App.shuffle(due.slice(0, 40))); }
+    else if (type === 'new') { var news = App.srsNew(p, 10); if (!news.length) return renderHub(ww); startFlash(ww, 'new', news); }
+    else startFlash(ww, 'free', App.sample(p.length ? p : App.W, 15));
+  };
+  pushRound();
+  renderFlash(w);
+}
+
+function renderFlash(w) {
+  clearBelow(w);
+  sub = 'round';
+  var s = state;
+  if (!s) return renderHub(w);
+  if (s.i >= s.deck.length) return renderRoundStats(w);
+  var word = s.deck[s.i];
+
+  w.appendChild(App.el('div', 'fc-meta',
+    '<span class="fc-count">' + s.name + ' · ' + (s.i + 1) + ' / ' + s.deck.length + '</span>' +
+    '<span class="fc-cat-tag">' + (App.lvlTag(word) || '') + '</span>'));
+
+  var scene = App.el('div', 'fc-scene');
+  var card = App.el('div', 'fc-card');
+  var roman = App.esc(App.roman(word));
+  card.innerHTML =
+    '<div class="fc-face fc-front">' +
+      '<span class="fc-hanzi">' + App.dispTone(word) + '</span>' +
+      (s.type === 'new' ? '<span class="fc-pinyin">' + roman + '</span>' : '') +
+      '<span class="fc-tap">Toca para voltear</span>' +
+    '</div>' +
+    '<div class="fc-face fc-back">' +
+      '<span class="fc-hanzi">' + App.esc(App.disp(word)) + '</span>' +
+      '<span class="fc-pinyin">' + App.esc(word.p) + '</span>' +
+      App.meaningHtml(word.es || word.en, 'fc-es') +
+      '<button class="icon-btn" data-a="det" title="Ver ficha" style="margin-top:6px"><svg viewBox="0 0 24 24"><use href="#icon-search"/></svg></button>' +
+      '<span class="fc-tap">Toca para voltear</span>' +
+    '</div>';
+  card.onclick = function (ev) {
+    if (ev.target.closest('.icon-btn')) return;
+    card.classList.toggle('flip');
+    if (card.classList.contains('flip')) App.speak(App.disp(word));
+  };
+  card.querySelector('[data-a="det"]').onclick = function (e) { e.stopPropagation(); App.openWord(word); };
+  scene.appendChild(card);
+  w.appendChild(scene);
+
+  var actions = App.el('div', 'fc-actions');
+  var no = App.el('button', 'fc-btn fc-btn-no', s.type === 'new' ? 'Difícil' : 'Otra vez');
+  var si = App.el('button', 'fc-btn fc-btn-si', s.type === 'new' ? 'Entendida' : 'Bien');
+  no.onclick = function () {
+    s.bad++; s.seen++;
+    if (s.type !== 'free') App.srsReview(word, false); else App.recordAttempt(word.s, false);
+    var pos = Math.min(s.deck.length, s.i + 3 + Math.floor(Math.random() * 3));
+    s.deck.splice(pos, 0, word);
+    s.i++;
+    renderFlash(w);
+  };
+  si.onclick = function () {
+    s.ok++; s.seen++;
+    if (s.type !== 'free') {
+      var wasNew = !App.srsGet(word.s);
+      App.srsReview(word, true);
+      if (wasNew) { s.neu++; App.day('neu', 1); }
+    } else { App.recordAttempt(word.s, true); }
+    s.i++;
+    renderFlash(w);
+  };
+  actions.appendChild(no); actions.appendChild(si);
+  w.appendChild(actions);
+
+  var quit = App.el('button', 'btn btn-sm', 'Terminar sesión');
+  quit.style.margin = '1rem auto 0';
+  quit.onclick = function () { renderRoundStats(w); };
+  w.appendChild(quit);
 }
 
 /* ---------- dictado (ronda infinita) ---------- */
@@ -425,6 +538,7 @@ function renderDict(w) {
     s.seen++;
     if (right) { s.ok++; App.xp(3); } else { s.bad++; }
     App.day(right ? 'ok' : 'bad', 1);
+    App.recordAttempt(word.s, right);
     fb.innerHTML = (right ? '✅ ¡Correcto!' : '❌ Era:') +
       ' <b style="color:var(--gold)">' + App.esc(word.p) + '</b> · ' +
       '<span style="font-family:var(--hanzi);color:var(--ink)">' + App.esc(App.disp(word)) + '</span> · ' +
@@ -472,6 +586,7 @@ function startMatch(w) {
         first.classList.remove('sel');
         first.classList.add('done'); tile.classList.add('done');
         left--; App.day('ok', 1); App.xp(2);
+        App.recordAttempt(a.word.s, true);
         App.$('match-left').textContent = left + ' restantes';
         if (!left) {
           setTimeout(function () {
@@ -481,6 +596,7 @@ function startMatch(w) {
         }
       } else {
         errs++; App.day('bad', 1);
+        App.recordAttempt(a.word.s, false); App.recordAttempt(b.word.s, false);
         lock = true;
         first.classList.add('err'); tile.classList.add('err');
         setTimeout(function () {
@@ -531,6 +647,7 @@ function startMemo(w) {
         a.tile.classList.add('done'); tile.classList.add('done');
         App.speak(App.disp(t.word));
         App.xp(2); App.day('ok', 1);
+        App.recordAttempt(t.word.s, true);
         found++;
         if (found === 6) {
           setTimeout(function () {
@@ -541,6 +658,7 @@ function startMemo(w) {
       } else {
         lock = true;
         App.day('bad', 1);
+        App.recordAttempt(a.t.word.s, false); App.recordAttempt(t.word.s, false);
         setTimeout(function () {
           a.tile.classList.add('hidden-face'); a.tile.innerHTML = '';
           tile.classList.add('hidden-face'); tile.innerHTML = '';
@@ -689,6 +807,7 @@ function startMahjong(w) {
   function countFail(p1, p2) {
     if (!failed[p1] || !failed[p2]) errs++;
     failed[p1] = failed[p2] = 1;
+    App.recordAttempt(words[p1].s, false); App.recordAttempt(words[p2].s, false);
   }
 
   w.appendChild(App.el('div', 'q-top',
@@ -767,6 +886,7 @@ function startMahjong(w) {
       a.el.classList.add('out'); t.el.classList.add('out');
       left--;
       App.day('ok', 1); App.xp(2);
+      App.recordAttempt(word.s, true);
       App.$('mj-left').textContent = left + ' restantes';
       caption.innerHTML = '<span class="mj-cap-e">' + MJ_EMOJI[word.s] + '</span> ' +
         '<span class="zh">' + App.toneSpans(App.disp(word), word.p) + '</span> · ' +
@@ -892,6 +1012,7 @@ function renderWriting(w) {
         App.G.written++; App.saveG();
         App.mission('write', 1);
         App.day(good ? 'ok' : 'bad', 1);
+        App.recordAttempt(item.word.s, good);
         App.xp(good ? 4 : 1);
         App.speak(ch);
         setTimeout(function () { if (state === s) { s.i++; renderWriting(w); } }, 900);
@@ -980,6 +1101,7 @@ function nextRush(w, p) {
       s.total++;
       if (right) { s.ok++; App.xp(2); }
       App.day(right ? 'ok' : 'bad', 1);
+      App.recordAttempt(word.s, right);
       b.classList.add(right ? 'ok' : 'bad');
       if (right) b.insertAdjacentHTML('afterbegin', '<span class="opt-check">✓</span>');
       setTimeout(function () { nextRush(w, p); }, right ? 250 : 700);

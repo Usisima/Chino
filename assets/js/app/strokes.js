@@ -59,6 +59,7 @@ function renderHub(w) {
   w.appendChild(lvlRow);
 
   var chars = levelChars();
+  prefetchStrokes(chars);   // calienta los shards de trazos para que el ejercicio arranque al instante
   w.appendChild(App.el('p', 'hint', 'Traza los caracteres en el orden correcto. Practica sin límite y termina cuando quieras.'));
 
   var start = App.el('button', 'btn btn-jade', '<svg viewBox="0 0 24 24"><use href="#icon-brush"/></svg>Practicar trazos · ' + chars.length + ' caracteres');
@@ -81,6 +82,21 @@ function renderHub(w) {
     });
     w.appendChild(grid);
   }
+}
+
+/* precarga los shards de trazos de un conjunto de caracteres (una vez por shard) */
+var prefetched = {};
+function prefetchStrokes(chars) {
+  var shards = {};
+  chars.forEach(function (item) {
+    var sh = item.ch.codePointAt(0) % 48;
+    shards[sh] = item.ch;   // un carácter representante por shard basta para cachearlo
+  });
+  Object.keys(shards).forEach(function (sh) {
+    if (prefetched[sh]) return;
+    prefetched[sh] = 1;
+    App.strokes(shards[sh]);   // App.strokes cachea el shard completo
+  });
 }
 
 /* ---------- sesión de trazado (infinita) ---------- */
@@ -133,6 +149,7 @@ function renderTrace(w) {
         App.G.written++; App.saveG();
         App.mission('write', 1);
         App.day(good ? 'ok' : 'bad', 1);
+        App.recordAttempt(item.word.s, good);
         App.xp(good ? 4 : 1);
         App.speak(ch);
         setTimeout(function () { if (sState === s) { s.i++; renderTrace(w); } }, 900);

@@ -25,6 +25,7 @@ App.S = Object.assign({
   rate: 0.85,         // velocidad TTS
   reminders: false
 }, App.load('chino_settings', {}));
+App.S.scheme = 'new';   // HSK 3.0 es el estándar único de la app
 App.saveS = function () { App.save('chino_settings', App.S); };
 
 /* ---------- utilidades ---------- */
@@ -205,6 +206,26 @@ App.short = function (w) {
   if (!App.S.showTrans) return '···';
   return App.gloss(w) || App.trans(w);
 };
+/* significados como lista, cada uno con mayúscula inicial */
+App.capFirst = function (s) {
+  s = String(s || '').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+};
+App.meaningList = function (text) {
+  return String(text || '')
+    .split(/\s*[|;]\s*/)
+    .map(function (m) { return App.capFirst(m.trim()); })
+    .filter(Boolean);
+};
+/* HTML de significados: <ul> si hay varios, texto simple si es uno */
+App.meaningHtml = function (text, cls) {
+  var items = App.meaningList(text);
+  if (!items.length) return '';
+  if (items.length === 1) return '<div class="' + (cls || 'wd-es') + '">' + App.esc(items[0]) + '</div>';
+  return '<ul class="mean-list">' + items.map(function (m) {
+    return '<li>' + App.esc(m) + '</li>';
+  }).join('') + '</ul>';
+};
 App.lvlTag = function (w) {
   var parts = [];
   if (w.l3) parts.push('HSK3 ' + App.lvlName('new', w.l3));
@@ -312,6 +333,7 @@ App.srsReview = function (w, pass) {
   }
   App.srs[w.s] = it;
   App.srsSave();
+  App.recordAttempt(w.s, pass);
   App.day(pass ? 'ok' : 'bad', 1);
   App.day('rev', 1);
   App.mission('rev', 1);
@@ -377,6 +399,27 @@ App.day = function (field, inc) {
   var d = App.G.days[t] || (App.G.days[t] = { secs: 0, rev: 0, ok: 0, bad: 0, neu: 0 });
   d[field] = (d[field] || 0) + inc;
   App.saveG();
+};
+
+/* ---------- precisión por palabra (juegos + práctica) ----------
+   Guarda los últimos ATTEMPTS intentos de cada palabra (1 acierto / 0 fallo).
+   La precisión que se muestra en el perfil es el promedio de esa ventana. */
+var ATTEMPTS = 15;
+App.acc = App.load('chino_acc', {});
+App.recordAttempt = function (wordS, correct) {
+  if (!wordS) return;
+  var a = App.acc[wordS] || (App.acc[wordS] = []);
+  a.push(correct ? 1 : 0);
+  if (a.length > ATTEMPTS) a.splice(0, a.length - ATTEMPTS);
+  App.save('chino_acc', App.acc);
+};
+/* {n, ok, pct} de una palabra, o null si nunca se ha intentado */
+App.accStats = function (wordS) {
+  var a = App.acc[wordS];
+  if (!a || !a.length) return null;
+  var ok = 0;
+  for (var i = 0; i < a.length; i++) ok += a[i];
+  return { n: a.length, ok: ok, pct: Math.round(ok / a.length * 100) };
 };
 App.todayStats = function () {
   return App.G.days[App.today()] || { secs: 0, rev: 0, ok: 0, bad: 0, neu: 0 };
@@ -590,9 +633,8 @@ function renderWord(body, w) {
     '<div class="wd-hanzi">' + App.toneSpans(dispS, w.p) + '</div>' +
     (other ? '<div class="wd-trad">' + (App.S.script === 't' ? 'Simplificado: ' : 'Tradicional: ') + App.esc(other) + '</div>' : '') +
     '<div class="wd-pinyin">' + App.esc(w.p) + '</div>' +
-    (w.z ? '<div class="wd-zhuyin">' + App.esc(w.z) + '</div>' : '') +
-    (w.es ? '<div class="wd-es">' + App.esc(w.es) + '</div>'
-          : '<div class="wd-en">' + App.esc(w.en) + ' <span style="font-size:0.65rem;color:var(--ink3)">(EN · aún sin traducir)</span></div>') +
+    (w.es ? App.meaningHtml(w.es, 'wd-es')
+          : '<div class="wd-en">' + App.esc(App.capFirst(w.en)) + ' <span style="font-size:0.65rem;color:var(--ink3)">(EN · aún sin traducir)</span></div>') +
     '<div class="wd-actions">' +
       '<button class="icon-btn" data-a="audio" title="Escuchar" style="width:44px;height:44px"><svg viewBox="0 0 24 24" style="width:18px;height:18px"><use href="#icon-audio"/></svg></button>' +
       '<button class="icon-btn' + (App.isFav(w.s) ? ' on' : '') + '" data-a="fav" title="Favorito" style="width:44px;height:44px"><svg viewBox="0 0 24 24" style="width:18px;height:18px"><use href="#icon-star"/></svg></button>' +
@@ -607,15 +649,16 @@ function renderWord(body, w) {
   head.querySelector('[data-a="list"]').onclick = function () { addToListDialog(w); };
   body.appendChild(head);
 
-  // detalles
-  var it = App.srsGet(w.s);
-  var kv = App.el('div', 'card');
-  kv.innerHTML =
+  // detalles (sin estado de estudio)
+  var kvRows =
     (w.cls ? '<div class="kv"><span class="k">Clasificador</span><span class="v zh">' + App.esc(w.cls) + '</span></div>' : '') +
     (w.rad ? '<div class="kv"><span class="k">Radical</span><span class="v"><span class="zh">' + App.esc(w.rad) + '</span></span></div>' : '') +
-    (w.pos ? '<div class="kv"><span class="k">Categoría</span><span class="v">' + App.esc(App.posES(w.pos)) + '</span></div>' : '') +
-    '<div class="kv"><span class="k">Estudio</span><span class="v">' + (it ? (App.srsStage(w.s) === 'known' ? 'Dominada' : 'Aprendiendo') + ' · ' + it.reps + ' repasos' : 'Sin estudiar') + '</span></div>';
-  body.appendChild(kv);
+    (w.pos ? '<div class="kv"><span class="k">Categoría</span><span class="v">' + App.esc(App.posES(w.pos)) + '</span></div>' : '');
+  if (kvRows) {
+    var kv = App.el('div', 'card');
+    kv.innerHTML = kvRows;
+    body.appendChild(kv);
+  }
 
   // caracteres con trazos
   var chars = dispS.split('').filter(function (ch) { return /[㐀-鿿]/.test(ch); });
@@ -639,39 +682,24 @@ function renderWord(body, w) {
   }
 }
 
-var ETYM_ES = { ideographic: 'ideográfico', pictographic: 'pictográfico', pictophonetic: 'compuesto fono-semántico' };
 function charCard(ch) {
   var c = App.CHARS[ch];
   var card = App.el('div', 'char-card');
   var top = App.el('div', 'char-card-top');
-  var box = App.el('div', 'char-writer');
+  var box = App.el('div', 'char-writer');   // la animación de trazos es el icono principal
   top.appendChild(box);
   var info = App.el('div', 'char-info');
   if (c) {
-    // definición: solo en español (la de la palabra monosílaba equivalente);
-    // si no existe aún, se omite — nada de inglés en la interfaz.
+    // definición: solo en español (la de la palabra monosílaba equivalente),
+    // capitalizada y en lista si tiene varias acepciones.
     var wES = App.byS[ch] && App.byS[ch].es;
-    var defHtml = wES ? App.esc(wES) : '';
-    // etimología: solo lo componible en español
-    var etym = '';
-    if (c[4] === 'pictophonetic' && (c[7] || c[8])) {
-      etym = 'Compuesto fono-semántico: ' +
-        (c[7] ? '<span class="zh">' + App.esc(c[7]) + '</span> aporta la pronunciación' : '') +
-        (c[7] && c[8] ? ' y ' : '') +
-        (c[8] ? '<span class="zh">' + App.esc(c[8]) + '</span> el significado' : '') + '.';
-    } else if (c[4] && ETYM_ES[c[4]]) {
-      etym = 'Carácter ' + ETYM_ES[c[4]] + '.';
-    }
+    var defHtml = wES ? App.meaningHtml(wES, 'char-def') : '';
     var metaParts = [];
     if (c[1]) metaParts.push(App.esc(c[1]));
     if (c[2]) metaParts.push('radical <span class="zh">' + App.esc(c[2]) + '</span>');
     info.innerHTML =
-      (defHtml ? '<div class="char-def">' + defHtml + '</div>' : '') +
-      '<div class="char-meta">' +
-        metaParts.join(' · ') +
-        (c[6] && c[6] !== '？' ? '<br>descomposición: <span class="zh">' + App.esc(c[6]) + '</span>' : '') +
-      '</div>' +
-      (etym ? '<div class="etym">' + etym + '</div>' : '');
+      defHtml +
+      (metaParts.length ? '<div class="char-meta">' + metaParts.join(' · ') + '</div>' : '');
   } else {
     info.innerHTML = '<div class="char-def">Sin datos del carácter.</div>';
   }

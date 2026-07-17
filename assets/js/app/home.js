@@ -67,7 +67,7 @@ function renderHome(w) {
       '<div class="mode-desc">' + (due ? 'El repaso espaciado mantiene la memoria fresca' : 'Aprende palabras nuevas o practica') + '</div></div>' +
       '<svg class="mode-arrow" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg>' +
     '</div>';
-  quick.onclick = function () { App.goto('learn'); };
+  quick.onclick = function () { App.goto('practice'); };
   w.appendChild(quick);
 
   /* misiones del día */
