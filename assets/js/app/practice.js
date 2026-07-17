@@ -40,6 +40,16 @@ App.views.practice = function () {
 
 function clearBelow(w) { stopTimer(); while (w.children.length > 2) w.removeChild(w.lastChild); }
 
+/* entrada de historial de una ronda: si la entrada actual ya es una subpantalla
+   de Práctica (ronda/estadísticas), se reemplaza en vez de apilar otra — así el
+   gesto de regresar nunca acumula entradas muertas */
+function pushRound() {
+  var st = null;
+  try { st = history.state; } catch (e) {}
+  if (st && st.v === 'practice' && st.sub && st.sub !== 'base') App.replaceState({ sub: 'round' });
+  else App.pushState({ sub: 'round' });
+}
+
 function pool() {
   var p = App.levelWords(App.S.scheme, App.S.level);
   if (p.length < 8) {
@@ -169,7 +179,7 @@ function startMC(w, mode) {
     started: Date.now(), arr: pool()
   };
   state.again = function (ww) { startMC(ww, mode); };
-  App.pushState({ sub: 'round' });
+  pushRound();
   renderInfMC(w);
 }
 
@@ -282,7 +292,7 @@ function renderRoundStats(w, viaBack) {
   var b1 = App.el('button', 'btn btn-jade', 'Otra ronda');
   b1.onclick = function () { if (s.again) s.again(w); else renderHub(w); };
   var b2 = App.el('button', 'btn', 'Volver');
-  b2.onclick = function () { renderHub(w); };
+  b2.onclick = function () { history.back(); };   // consume la entrada de la ronda
   row.appendChild(b1); row.appendChild(b2);
   w.appendChild(row);
 }
@@ -363,7 +373,7 @@ function renderResults(w, ok, total, kind) {
   if (pct >= 80) confettiBurst(d);
   var b = App.el('button', 'btn btn-jade', 'Volver a práctica');
   b.style.margin = '0.9rem auto 0';
-  b.onclick = function () { renderHub(w); };
+  b.onclick = function () { history.back(); };   // consume la entrada de la ronda
   w.appendChild(b);
 }
 
@@ -371,7 +381,7 @@ function renderResults(w, ok, total, kind) {
 function startDictation(w) {
   state = { dict: true, ok: 0, bad: 0, seen: 0, name: 'Dictado', started: Date.now(), arr: pool() };
   state.again = startDictation;
-  App.pushState({ sub: 'round' });
+  pushRound();
   renderDict(w);
 }
 function renderDict(w) {
@@ -436,7 +446,7 @@ function renderDict(w) {
 function startMatch(w) {
   clearBelow(w);
   sub = 'round';
-  App.pushState({ sub: 'round' });
+  pushRound();
   var words = sampleDistinct(pool(), 6);
   var tiles = [];
   words.forEach(function (word, i) {
@@ -485,7 +495,7 @@ function startMatch(w) {
   state = { match: true };
   var quit = App.el('button', 'btn btn-sm', 'Salir');
   quit.style.margin = '1.2rem auto 0';
-  quit.onclick = function () { state = null; renderHub(w); };
+  quit.onclick = function () { state = null; history.back(); };
   w.appendChild(quit);
 }
 
@@ -493,7 +503,7 @@ function startMatch(w) {
 function startMemo(w) {
   clearBelow(w);
   sub = 'round';
-  App.pushState({ sub: 'round' });
+  pushRound();
   var words = sampleDistinct(pool(), 6);
   var tiles = [];
   words.forEach(function (word, i) {
@@ -544,7 +554,7 @@ function startMemo(w) {
   state = { memo: true };
   var quit = App.el('button', 'btn btn-sm', 'Salir');
   quit.style.margin = '1.2rem auto 0';
-  quit.onclick = function () { state = null; renderHub(w); };
+  quit.onclick = function () { state = null; history.back(); };
   w.appendChild(quit);
 }
 
@@ -668,7 +678,7 @@ function startMahjong(w) {
   clearBelow(w);
   sub = 'round';
   var s = state = { mahjong: true };
-  App.pushState({ sub: 'round' });
+  pushRound();
 
   var ids = [];
   for (var i = 0; i < pairs; i++) ids.push(i);
@@ -817,7 +827,7 @@ function startMahjong(w) {
   var bMix = App.el('button', 'btn btn-sm', 'Mezclar');
   bMix.onclick = function () { if (!lock) reshuffle(); };
   var bQuit = App.el('button', 'btn btn-sm', 'Salir');
-  bQuit.onclick = function () { state = null; renderHub(w); };
+  bQuit.onclick = function () { state = null; history.back(); };
   row.appendChild(bHint); row.appendChild(bMix); row.appendChild(bQuit);
   w.appendChild(row);
 
@@ -838,7 +848,7 @@ function startWriting(w) {
   if (!chars.length) { App.toast('Sin datos de escritura en este nivel'); return renderHub(w); }
   state = { writing: true, deck: App.shuffle(chars), i: 0, ok: 0, bad: 0, seen: 0, name: 'Escritura', started: Date.now() };
   state.again = startWriting;
-  App.pushState({ sub: 'round' });
+  pushRound();
   renderWriting(w);
 }
 function renderWriting(w) {
@@ -924,7 +934,7 @@ function renderWriting(w) {
 function startRush(w) {
   var p = pool();
   state = { rush: true, ok: 0, total: 0, ends: Date.now() + 60000 };
-  App.pushState({ sub: 'round' });
+  pushRound();
   nextRush(w, p);
 }
 function nextRush(w, p) {
@@ -986,7 +996,7 @@ function startExam(w) {
     qs: makeQs(20, modes), i: 0, ok: 0, name: 'Examen',
     exam: true, ends: Date.now() + 10 * 60000, started: Date.now()
   };
-  App.pushState({ sub: 'round' });
+  pushRound();
   renderExamQ(w);
 }
 function renderExamQ(w) {
@@ -1032,7 +1042,7 @@ function finishExam(w) {
   App.xp(pct >= 80 ? 40 : 10);
   var b = App.el('button', 'btn btn-jade', 'Volver a práctica');
   b.style.margin = '0.9rem auto 0';
-  b.onclick = function () { renderHub(w); };
+  b.onclick = function () { history.back(); };   // consume la entrada de la ronda
   w.appendChild(b);
 }
 

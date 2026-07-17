@@ -137,7 +137,11 @@ App.ready.then(function () {
 /* header + primera vista */
 App.hdr();
 var h = (location.hash || '').slice(1);
-// entrada base del historial: se reemplaza, así el primer "atrás" sale de la app
-App.goto(['home', 'learn', 'dict', 'practice', 'strokes', 'songs', 'profile'].indexOf(h) >= 0 ? h : 'home', true);
+var target = ['home', 'learn', 'dict', 'practice', 'strokes', 'songs', 'profile'].indexOf(h) >= 0 ? h : 'home';
+// Inicio es SIEMPRE la entrada base del historial; si se abre en otra vista
+// (hash de la sesión anterior), esa vista se apila encima. Así el gesto de
+// regresar pasa por Inicio antes de salir de la aplicación.
+App.goto('home', true);
+if (target !== 'home') App.goto(target);
 
 })();

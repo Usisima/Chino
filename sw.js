@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'chino-v14';
+const CACHE = 'chino-v16';
 
 // App shell + datos principales: si algo falla, el SW no se instala.
 // Los shards de trazos (assets/data/strokes/) se cachean bajo demanda.
