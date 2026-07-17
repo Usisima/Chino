@@ -110,7 +110,33 @@ function playIcon(playing) {
 function setActiveLine(li) {
   var lines = document.querySelectorAll('#songs-wrap .ly-line');
   lines.forEach(function (el, i) { el.classList.toggle('active', i === li); });
-  if (lines[li] && lines[li].scrollIntoView) lines[li].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  var el = lines[li];
+  var view = document.getElementById('view-songs');
+  if (!el || !view) return;
+  // scroll manual acotado al propio contenedor: centra la línea pero nunca
+  // pasa del final, así no rebota ni arrastra la barra inferior.
+  var target = el.offsetTop - view.clientHeight / 2 + el.offsetHeight / 2;
+  var max = view.scrollHeight - view.clientHeight;
+  target = Math.max(0, Math.min(target, max));
+  view.scrollTo({ top: target, behavior: 'smooth' });
+}
+
+/* lleva el audio al inicio de una línea (y lo pone a sonar si estaba parado) */
+function seekToLine(song, li) {
+  var line = song.lines[li];
+  if (!line || line.t == null) return;
+  if (!audioEl) startPlay(song);
+  var a = audioEl;
+  if (!a) return;
+  var apply = function () { a.currentTime = line.t; };
+  if (a.readyState >= 1) apply();
+  else a.addEventListener('loadedmetadata', apply, { once: true });
+  player.line = li;
+  setActiveLine(li);
+  if (a.paused) { a.play().then(function () {
+    player.playing = true;
+    var pb = App.$('play-btn'); if (pb) pb.innerHTML = playIcon(true);
+  }).catch(function () {}); }
 }
 function stopPlay() {
   player.playing = false;
@@ -219,21 +245,41 @@ function renderSong(w, song) {
       el.classList.toggle('off', App.S.songPy === false);
     });
   };
-  var bMark = App.el('button', 'btn btn-sm', '✓ Marcar conocidos');
+  var bEs = App.el('button', 'btn btn-sm' + (App.S.songEs ? ' btn-jade' : ''), 'Traducción');
+  bEs.onclick = function () {
+    App.S.songEs = !App.S.songEs;   // alterna mostrar/ocultar
+    App.saveS();
+    bEs.classList.toggle('btn-jade', !!App.S.songEs);
+    document.querySelectorAll('#songs-wrap .ly-es').forEach(function (el) {
+      el.classList.toggle('off', !App.S.songEs);
+    });
+  };
+  var bMark = App.el('button', 'btn btn-sm', '✓ Marcar');
   bMark.onclick = function () {
     markMode = !markMode;
     bMark.classList.toggle('btn-jade', markMode);
     closeCharCard();
   };
-  bar.appendChild(bPy); bar.appendChild(bMark);
+  bar.appendChild(bPy); bar.appendChild(bEs); bar.appendChild(bMark);
   w.appendChild(bar);
 
-  song.lines.forEach(function (line) {
+  song.lines.forEach(function (line, li) {
     var el = App.el('div', 'ly-line');
     el.appendChild(hanziRow(line, w, song));
     el.appendChild(App.el('div', 'ly-py' + (App.S.songPy === false ? ' off' : ''), App.esc(line.py)));
+    if (line.es) el.appendChild(App.el('div', 'ly-es' + (App.S.songEs ? '' : ' off'), App.esc(line.es)));
+    // tocar un espacio vacío de la línea lleva el audio a ese momento
+    if (line.t != null) {
+      el.classList.add('seekable');
+      el.onclick = function (e) {
+        if (e.target.closest('.ly-ch')) return;   // los caracteres abren su ficha / se marcan
+        seekToLine(song, li);
+      };
+    }
     w.appendChild(el);
   });
+  // espacio final: permite centrar las últimas líneas sin arrastrar la barra inferior
+  w.appendChild(App.el('div', 'ly-tail'));
 }
 
 /* fila de hanzi con cada carácter coloreado por tono; el toque muestra la
