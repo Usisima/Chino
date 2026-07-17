@@ -50,37 +50,38 @@
    ==================================================================== */
 :root {
   color-scheme: light dark;
-  /* PALETA «templo» — papel cálido, rojo bermellón, verde oliva, marrón oscuro */
-  --bg: #EFE7DA;
-  --surface: #F8F3E9;
-  --surface2: #E7DECD;
-  --track: #DBD1BE;
-  --inset: #E4DBCA;
+  /* PALETA «Inari» — rojo bermellón, teal, coral, crema, azul claro.
+     Modo claro: fondos blancos. Modo oscuro: negro con tonos suaves iluminados. */
+  --bg: #F5F3EE;
+  --surface: #FFFFFF;
+  --surface2: #F0EDE6;
+  --track: #E4E0D6;
+  --inset: #F2EFE8;
 
-  --ink: #2B221C;
-  --ink2: #6E6153;
-  --ink3: #9E927F;
+  --ink: #1E1A16;
+  --ink2: #5C554B;
+  --ink3: #928A7D;
 
-  --border: rgba(43, 34, 28, 0.10);
-  --border2: rgba(43, 34, 28, 0.17);
+  --border: rgba(30, 26, 22, 0.09);
+  --border2: rgba(30, 26, 22, 0.15);
 
-  --gold: #A22E22;          /* ROJO bermellón de templo (acento primario) */
-  --gold2: #B8402F;
-  --brand-strong: #86211A;
-  --brand-soft: #F0DED6;
-  --on-brand: #F8F3E9;
-  --brand-shadow: rgba(162, 46, 34, 0.26);
+  --gold: #D23A28;          /* ROJO bermellón (acento primario) */
+  --gold2: #E04A34;
+  --brand-strong: #B12C1D;
+  --brand-soft: #FBE1DA;
+  --on-brand: #FFFFFF;
+  --brand-shadow: rgba(210, 58, 40, 0.26);
 
-  --accent: #5F7042;        /* VERDE oliva — acierto / éxito */
-  --accent-dim: rgba(95, 112, 66, 0.14);
-  --teal-dim: rgba(162, 46, 34, 0.08);   /* tinte de marca (fondos suaves) */
+  --accent: #14848A;        /* TEAL — acierto / éxito */
+  --accent-dim: rgba(20, 132, 138, 0.14);
+  --teal-dim: rgba(210, 58, 40, 0.08);   /* tinte de marca (fondos suaves) */
 
-  --amber: #B77F35;         /* ocre terroso — racha / monedas */
-  --amber-soft: rgba(183, 127, 53, 0.15);
+  --amber: #C89A34;         /* dorado crema — racha / monedas */
+  --amber-soft: rgba(200, 154, 52, 0.15);
 
-  --red: #C0442E;           /* error / incorrecto (más cálido que la marca) */
-  --red2: #C0442E;
-  --red-soft: rgba(192, 68, 46, 0.13);
+  --red: #DB4B37;           /* coral — error / incorrecto */
+  --red2: #DB4B37;
+  --red-soft: rgba(219, 75, 55, 0.12);
 
   --r: 20px;
   --r-lg: 24px;
@@ -88,72 +89,72 @@
   --ease: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --hanzi: 'Noto Serif SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
 
-  --grid: rgba(162, 46, 34, 0.10);       /* líneas guía del cuadro de escritura */
-  --star-rgb: 120, 90, 66;               /* motas de fondo */
-  --hw-outline: rgba(43, 34, 28, 0.18);  /* contorno HanziWriter */
+  --grid: rgba(210, 58, 40, 0.10);       /* líneas guía del cuadro de escritura */
+  --star-rgb: 20, 132, 138;              /* motas de fondo (teal) */
+  --hw-outline: rgba(30, 26, 22, 0.16);  /* contorno HanziWriter */
 
-  --shadow-sm: 0 1px 2px rgba(43, 34, 28, 0.06), 0 1px 3px rgba(43, 34, 28, 0.05);
-  --shadow-md: 0 6px 20px rgba(90, 50, 30, 0.12), 0 2px 6px rgba(43, 34, 28, 0.06);
-  --shadow-lg: 0 18px 44px rgba(70, 40, 24, 0.18);
+  --shadow-sm: 0 1px 2px rgba(30, 26, 22, 0.05), 0 1px 3px rgba(30, 26, 22, 0.04);
+  --shadow-md: 0 6px 20px rgba(30, 40, 46, 0.10), 0 2px 6px rgba(30, 26, 22, 0.05);
+  --shadow-lg: 0 18px 44px rgba(24, 40, 48, 0.16);
 
-  --header-bg: rgba(248, 243, 233, 0.85);
-  --nav-bg: rgba(248, 243, 233, 0.92);
-  --overlay-scrim: rgba(43, 34, 28, 0.36);
-  --overlay-panel: #F8F3E9;
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --nav-bg: rgba(255, 255, 255, 0.92);
+  --overlay-scrim: rgba(30, 26, 22, 0.34);
+  --overlay-panel: #FFFFFF;
 }
 
-/* ---- modo oscuro automático (según el sistema) ---- */
+/* ---- modo oscuro automático (según el sistema) — fondo NEGRO, tonos suaves ---- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1A1410; --surface: #241C16; --surface2: #2E251D; --track: #3A2F25; --inset: #1F1811;
-    --ink: #F0E7D8; --ink2: #C2B4A0; --ink3: #8A7C6A;
-    --border: rgba(240, 231, 216, 0.10); --border2: rgba(240, 231, 216, 0.18);
-    --gold: #E5705C; --gold2: #EC8069; --brand-strong: #F08C76; --brand-soft: #3A241E;
-    --on-brand: #1A1410; --brand-shadow: rgba(0, 0, 0, 0.5);
-    --accent: #A6BE6E; --accent-dim: rgba(166, 190, 110, 0.16); --teal-dim: rgba(229, 112, 92, 0.14);
-    --amber: #E0B36A; --amber-soft: rgba(224, 179, 106, 0.16);
-    --red: #F0796A; --red2: #F0796A; --red-soft: rgba(240, 121, 106, 0.16);
-    --grid: rgba(240, 231, 216, 0.12); --star-rgb: 200, 150, 110; --hw-outline: rgba(240, 231, 216, 0.16);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
-    --header-bg: rgba(26, 20, 16, 0.85); --nav-bg: rgba(26, 20, 16, 0.92);
-    --overlay-scrim: rgba(0, 0, 0, 0.62); --overlay-panel: #241C16;
+    --bg: #000000; --surface: #101012; --surface2: #1A1A1E; --track: #28282D; --inset: #070708;
+    --ink: #F1ECDF; --ink2: #B6AE9F; --ink3: #78726A;
+    --border: rgba(255, 255, 255, 0.10); --border2: rgba(255, 255, 255, 0.18);
+    --gold: #F26B4E; --gold2: #F5805F; --brand-strong: #F88C6F; --brand-soft: #2A130C;
+    --on-brand: #0A0605; --brand-shadow: rgba(0, 0, 0, 0.6);
+    --accent: #45C6C0; --accent-dim: rgba(69, 198, 192, 0.16); --teal-dim: rgba(242, 107, 78, 0.14);
+    --amber: #F2DD92; --amber-soft: rgba(242, 221, 146, 0.16);
+    --red: #EE5A47; --red2: #EE5A47; --red-soft: rgba(238, 90, 71, 0.18);
+    --grid: rgba(255, 255, 255, 0.09); --star-rgb: 168, 212, 222; --hw-outline: rgba(241, 236, 223, 0.16);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.7);
+    --header-bg: rgba(0, 0, 0, 0.82); --nav-bg: rgba(0, 0, 0, 0.90);
+    --overlay-scrim: rgba(0, 0, 0, 0.70); --overlay-panel: #101012;
   }
 }
 
 /* ---- interruptor manual (gana sobre la media query en ambos sentidos) ---- */
 :root[data-theme="light"] {
-  --bg: #EFE7DA; --surface: #F8F3E9; --surface2: #E7DECD; --track: #DBD1BE; --inset: #E4DBCA;
-  --ink: #2B221C; --ink2: #6E6153; --ink3: #9E927F;
-  --border: rgba(43, 34, 28, 0.10); --border2: rgba(43, 34, 28, 0.17);
-  --gold: #A22E22; --gold2: #B8402F; --brand-strong: #86211A; --brand-soft: #F0DED6;
-  --on-brand: #F8F3E9; --brand-shadow: rgba(162, 46, 34, 0.26);
-  --accent: #5F7042; --accent-dim: rgba(95, 112, 66, 0.14); --teal-dim: rgba(162, 46, 34, 0.08);
-  --amber: #B77F35; --amber-soft: rgba(183, 127, 53, 0.15);
-  --red: #C0442E; --red2: #C0442E; --red-soft: rgba(192, 68, 46, 0.13);
-  --grid: rgba(162, 46, 34, 0.10); --star-rgb: 120, 90, 66; --hw-outline: rgba(43, 34, 28, 0.18);
-  --shadow-sm: 0 1px 2px rgba(43, 34, 28, 0.06), 0 1px 3px rgba(43, 34, 28, 0.05);
-  --shadow-md: 0 6px 20px rgba(90, 50, 30, 0.12), 0 2px 6px rgba(43, 34, 28, 0.06);
-  --shadow-lg: 0 18px 44px rgba(70, 40, 24, 0.18);
-  --header-bg: rgba(248, 243, 233, 0.85); --nav-bg: rgba(248, 243, 233, 0.92);
-  --overlay-scrim: rgba(43, 34, 28, 0.36); --overlay-panel: #F8F3E9;
+  --bg: #F5F3EE; --surface: #FFFFFF; --surface2: #F0EDE6; --track: #E4E0D6; --inset: #F2EFE8;
+  --ink: #1E1A16; --ink2: #5C554B; --ink3: #928A7D;
+  --border: rgba(30, 26, 22, 0.09); --border2: rgba(30, 26, 22, 0.15);
+  --gold: #D23A28; --gold2: #E04A34; --brand-strong: #B12C1D; --brand-soft: #FBE1DA;
+  --on-brand: #FFFFFF; --brand-shadow: rgba(210, 58, 40, 0.26);
+  --accent: #14848A; --accent-dim: rgba(20, 132, 138, 0.14); --teal-dim: rgba(210, 58, 40, 0.08);
+  --amber: #C89A34; --amber-soft: rgba(200, 154, 52, 0.15);
+  --red: #DB4B37; --red2: #DB4B37; --red-soft: rgba(219, 75, 55, 0.12);
+  --grid: rgba(210, 58, 40, 0.10); --star-rgb: 20, 132, 138; --hw-outline: rgba(30, 26, 22, 0.16);
+  --shadow-sm: 0 1px 2px rgba(30, 26, 22, 0.05), 0 1px 3px rgba(30, 26, 22, 0.04);
+  --shadow-md: 0 6px 20px rgba(30, 40, 46, 0.10), 0 2px 6px rgba(30, 26, 22, 0.05);
+  --shadow-lg: 0 18px 44px rgba(24, 40, 48, 0.16);
+  --header-bg: rgba(255, 255, 255, 0.85); --nav-bg: rgba(255, 255, 255, 0.92);
+  --overlay-scrim: rgba(30, 26, 22, 0.34); --overlay-panel: #FFFFFF;
 }
 :root[data-theme="dark"] {
-  --bg: #1A1410; --surface: #241C16; --surface2: #2E251D; --track: #3A2F25; --inset: #1F1811;
-  --ink: #F0E7D8; --ink2: #C2B4A0; --ink3: #8A7C6A;
-  --border: rgba(240, 231, 216, 0.10); --border2: rgba(240, 231, 216, 0.18);
-  --gold: #E5705C; --gold2: #EC8069; --brand-strong: #F08C76; --brand-soft: #3A241E;
-  --on-brand: #1A1410; --brand-shadow: rgba(0, 0, 0, 0.5);
-  --accent: #A6BE6E; --accent-dim: rgba(166, 190, 110, 0.16); --teal-dim: rgba(229, 112, 92, 0.14);
-  --amber: #E0B36A; --amber-soft: rgba(224, 179, 106, 0.16);
-  --red: #F0796A; --red2: #F0796A; --red-soft: rgba(240, 121, 106, 0.16);
-  --grid: rgba(240, 231, 216, 0.12); --star-rgb: 200, 150, 110; --hw-outline: rgba(240, 231, 216, 0.16);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
-  --header-bg: rgba(26, 20, 16, 0.85); --nav-bg: rgba(26, 20, 16, 0.92);
-  --overlay-scrim: rgba(0, 0, 0, 0.62); --overlay-panel: #241C16;
+  --bg: #000000; --surface: #101012; --surface2: #1A1A1E; --track: #28282D; --inset: #070708;
+  --ink: #F1ECDF; --ink2: #B6AE9F; --ink3: #78726A;
+  --border: rgba(255, 255, 255, 0.10); --border2: rgba(255, 255, 255, 0.18);
+  --gold: #F26B4E; --gold2: #F5805F; --brand-strong: #F88C6F; --brand-soft: #2A130C;
+  --on-brand: #0A0605; --brand-shadow: rgba(0, 0, 0, 0.6);
+  --accent: #45C6C0; --accent-dim: rgba(69, 198, 192, 0.16); --teal-dim: rgba(242, 107, 78, 0.14);
+  --amber: #F2DD92; --amber-soft: rgba(242, 221, 146, 0.16);
+  --red: #EE5A47; --red2: #EE5A47; --red-soft: rgba(238, 90, 71, 0.18);
+  --grid: rgba(255, 255, 255, 0.09); --star-rgb: 168, 212, 222; --hw-outline: rgba(241, 236, 223, 0.16);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.7);
+  --header-bg: rgba(0, 0, 0, 0.82); --nav-bg: rgba(0, 0, 0, 0.90);
+  --overlay-scrim: rgba(0, 0, 0, 0.70); --overlay-panel: #101012;
 }
 
 /* ---- colores por tono del pinyin (1 rojo · 2 naranja · 3 verde · 4 azul · neutro gris) ---- */

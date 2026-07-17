@@ -67,10 +67,42 @@ function pool() {
   return p;
 }
 
+/* ---------- muestreo sesgado hacia palabras débiles ----------
+   Débil = precisión < 80 % en la ventana de intentos (con ≥3) o repaso SRS vencido.
+   Aprox. la mitad de lo que sale en ejercicios y juegos viene de ese grupo. */
+function weakSet(p) {
+  var now = Date.now();
+  return p.filter(function (w) {
+    var st = App.accStats(w.s);
+    if (st && st.n >= 3 && st.pct < 80) return true;
+    var it = App.srsGet(w.s);
+    return !!(it && it.due <= now);
+  });
+}
+/* una palabra: 50 % del grupo débil (si existe), 50 % de todo el pool */
+function smartPick(p) {
+  var weak = weakSet(p);
+  var src = weak.length && Math.random() < 0.5 ? weak : p;
+  return src[Math.floor(Math.random() * src.length)];
+}
+/* pool barajado con las débiles intercaladas (~mitad de cada prefijo) */
+function biasedOrder(p) {
+  var weak = App.shuffle(weakSet(p));
+  if (!weak.length) return App.shuffle(p.slice());
+  var inW = {};
+  weak.forEach(function (w) { inW[w.s] = 1; });
+  var rest = App.shuffle(p.filter(function (w) { return !inW[w.s]; }));
+  var out = [], i = 0, j = 0;
+  while (i < weak.length && j < rest.length) out.push(Math.random() < 0.5 ? weak[i++] : rest[j++]);
+  while (i < weak.length) out.push(weak[i++]);
+  while (j < rest.length) out.push(rest[j++]);
+  return out;
+}
+
 /* muestreo sin glosas repetidas: evita parejas/opciones con el mismo texto */
 function sampleDistinct(p, n) {
   var out = [], seen = {}, rest = [];
-  App.shuffle(p.slice()).forEach(function (word) {
+  biasedOrder(p).forEach(function (word) {
     var g = App.gloss(word);
     if (out.length < n && !seen[g]) { seen[g] = 1; out.push(word); }
     else rest.push(word);
@@ -143,6 +175,7 @@ function renderHub(w) {
   if ('speechSynthesis' in window) {
     hubCard(w, '听', 'Escuchar', 'Escucha y elige el significado', function () { startMC(w, 'listen'); });
     hubCard(w, '写', 'Dictado', 'Escucha y escribe el pinyin', function () { startDictation(w); });
+    hubCard(w, '声', 'Tonos', 'Escucha y elige el tono', function () { startTones(w); });
   }
   hubCard(w, '对', 'Emparejar', 'Une cada hanzi con su significado', function () { startMatch(w); });
   hubCard(w, '笔', 'Escritura', 'Traza caracteres con el orden correcto', function () { startWriting(w); });
@@ -206,7 +239,7 @@ function renderInfMC(w) {
   var s = state;
   if (!s) return renderHub(w);
   var p = s.arr;
-  var word = App.sample(p, 1)[0];
+  var word = smartPick(p);
   var q = makeQ(p, word, s.mode);
 
   // ronda infinita: solo marcador de aciertos/fallos, sin barra ni porcentaje
@@ -492,7 +525,7 @@ function renderDict(w) {
   sub = 'round';
   var s = state;
   if (!s) return renderHub(w);
-  var word = App.sample(s.arr, 1)[0];
+  var word = smartPick(s.arr);
 
   w.appendChild(App.el('div', 'q-top',
     '<span class="q-count">Dictado</span>' +
@@ -544,6 +577,92 @@ function renderDict(w) {
   quit.style.margin = '1.4rem auto 0';
   quit.onclick = function () { renderRoundStats(w); };
   w.appendChild(quit);
+}
+
+/* ---------- tonos (ronda infinita) ---------- */
+/* palabras con alineación segura hanzi↔pinyin (misma cantidad de sílabas) */
+function tonePool() {
+  return pool().filter(function (word) {
+    var hz = App.disp(word).split('').filter(function (c) { return /[㐀-鿿]/.test(c); });
+    var syls = String(word.p || '').trim().split(/\s+/).filter(Boolean);
+    return hz.length && hz.length === syls.length;
+  });
+}
+var TONE_OPTS = [
+  { t: 1, mark: 'ā', name: '1.º' },
+  { t: 2, mark: 'á', name: '2.º' },
+  { t: 3, mark: 'ǎ', name: '3.º' },
+  { t: 4, mark: 'à', name: '4.º' },
+  { t: 5, mark: 'a', name: 'neutro' }
+];
+function startTones(w) {
+  var arr = tonePool();
+  if (arr.length < 8) { App.toast('Sin palabras suficientes en este nivel'); return; }
+  state = { tones: true, ok: 0, bad: 0, seen: 0, infinite: true, name: 'Tonos', started: Date.now(), arr: arr };
+  state.again = startTones;
+  pushRound();
+  renderTones(w);
+}
+function renderTones(w) {
+  clearBelow(w);
+  sub = 'round';
+  var s = state;
+  if (!s) return renderHub(w);
+  var word = smartPick(s.arr);
+  var hz = App.disp(word).split('').filter(function (c) { return /[㐀-鿿]/.test(c); });
+  var syls = word.p.trim().split(/\s+/);
+  var idx = Math.floor(Math.random() * hz.length);
+  var target = App.toneNum(syls[idx]);
+
+  w.appendChild(App.el('div', 'q-top',
+    '<span class="q-count">Tonos</span>' +
+    '<span class="q-score">' + s.ok + ' ✓ · <span style="color:var(--red)">' + s.bad + ' ✗</span></span>'));
+
+  // el hanzi va sin colores de tono (delatarían la respuesta); el objetivo, subrayado
+  var hanzi = hz.map(function (c, i) {
+    return i === idx ? '<span class="q-tone-target">' + App.esc(c) + '</span>'
+                     : '<span class="q-tone-dim">' + App.esc(c) + '</span>';
+  }).join('');
+  var prompt = App.el('div', 'q-prompt',
+    '<span class="q-prompt-label">' + (hz.length > 1 ? '¿Qué tono tiene el carácter marcado?' : '¿Qué tono tiene?') + '</span>' +
+    '<span class="q-hanzi' + (hz.length > 3 ? ' long' : '') + '">' + hanzi + '</span>' +
+    listenBtnHtml());
+  prompt.querySelector('[data-a="say"]').onclick = function () { App.speak(App.disp(word)); };
+  w.appendChild(prompt);
+  setTimeout(function () { App.speak(App.disp(word)); }, 350);
+
+  var opts = App.el('div', 'q-opts tones');
+  var answered = false;
+  TONE_OPTS.forEach(function (o) {
+    var b = App.el('button', 'q-opt',
+      '<span class="tone-mark t' + o.t + '">' + o.mark + '</span>' +
+      '<span class="tone-name">' + o.name + '</span>');
+    b.onclick = function () {
+      if (answered) return;
+      answered = true;
+      var right = o.t === target;
+      s.seen++;
+      if (right) s.ok++; else s.bad++;
+      App.day(right ? 'ok' : 'bad', 1);
+      App.recordAttempt(word.s, right);
+      if (right) App.xp(2);
+      opts.querySelectorAll('.q-opt').forEach(function (x) { x.classList.add('off'); });
+      b.classList.add(right ? 'ok' : 'bad');
+      if (!right) opts.children[target - 1].classList.add('ok');
+      // revela los colores de tono y el pinyin completo
+      var hzEl = prompt.querySelector('.q-hanzi');
+      hzEl.innerHTML = App.dispTone(word);
+      hzEl.insertAdjacentHTML('afterend', '<span class="q-pinyin">' + App.esc(word.p) + '</span>');
+      setTimeout(function () { if (state === s) renderTones(w); }, right ? 850 : 1600);
+    };
+    opts.appendChild(b);
+  });
+  w.appendChild(opts);
+
+  var fin = App.el('button', 'btn-quiet', 'Terminar y ver estadísticas');
+  fin.style.margin = '1.4rem auto 0';
+  fin.onclick = function () { renderRoundStats(w); };
+  w.appendChild(fin);
 }
 
 /* ---------- emparejar ---------- */
@@ -948,9 +1067,9 @@ function startMahjong(w) {
 function startWriting(w) {
   clearBelow(w);
   var p = pool();
-  // caracteres únicos de palabras del nivel
+  // caracteres únicos de palabras del nivel (las débiles primero en la baraja)
   var chars = [], seen = {};
-  App.shuffle(p.slice()).forEach(function (word) {
+  biasedOrder(p).forEach(function (word) {
     App.disp(word).split('').forEach(function (ch) {
       if (!seen[ch] && /[㐀-鿿]/.test(ch) && App.CHARS[ch]) { seen[ch] = word; chars.push({ ch: ch, word: word }); }
     });
@@ -1057,7 +1176,7 @@ function nextRush(w, p) {
     state = null;
     return renderResults(w, ok, Math.max(total, 1), 'contrarreloj');
   }
-  var word = App.sample(p, 1)[0];
+  var word = smartPick(p);
   var q = makeQ(p, word, 'read');
 
   var top = App.el('div', 'q-top',
