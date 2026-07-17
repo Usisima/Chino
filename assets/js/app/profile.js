@@ -148,7 +148,7 @@ function render(w) {
   var rst = App.el('button', 'btn btn-sm btn-red', 'Reiniciar todo');
   rst.onclick = function () {
     if (!confirm('¿Borrar todo el progreso? Esta acción no se puede deshacer.')) return;
-    ['chino_settings', 'chino_srs', 'chino_gam', 'chino_lists', 'chino_favs', 'chino_hist'].forEach(function (k) { localStorage.removeItem(k); });
+    ['chino_settings', 'chino_srs', 'chino_gam', 'chino_lists', 'chino_favs', 'chino_hist', 'chino_acc', 'chino_learned', 'chino_read'].forEach(function (k) { localStorage.removeItem(k); });
     location.reload();
   };
   dataRow.appendChild(exp); dataRow.appendChild(imp); dataRow.appendChild(rst);
@@ -179,21 +179,22 @@ function accGridBlock() {
   var grid = App.el('div', 'acc-grid');
   words.forEach(function (word) {
     var st = App.accStats(word.s);
+    var learned = App.isLearned(word.s);
+    var enough = st && st.n >= 10;   // solo se ilumina con ≥10 intentos
     var band = 'none';
-    if (st) {
-      withData++; sumPct += st.pct;
-      band = st.pct >= 80 ? 'hi' : st.pct >= 50 ? 'mid' : 'lo';
-    }
-    var cell = App.el('button', 'acc-cell acc-' + band, '<span class="zh">' + App.esc(App.disp(word)) + '</span>');
-    cell.title = App.disp(word) + ' · ' + (st ? st.pct + '% (' + st.ok + '/' + st.n + ')' : 'sin intentos');
+    if (enough) band = learned ? 'hi' : (st.pct >= 80 ? 'hi' : st.pct >= 50 ? 'mid' : 'lo');
+    if (enough) { withData++; sumPct += st.pct; }
+    var cell = App.el('button', 'acc-cell acc-' + band + (learned && enough ? ' acc-learned' : ''), '<span class="zh">' + App.esc(App.disp(word)) + '</span>');
+    cell.title = App.disp(word) + (learned ? ' · aprendida' : '') + ' · ' +
+      (st ? st.pct + '% (' + st.ok + '/' + st.n + ')' + (enough ? '' : ' · faltan ' + (10 - st.n) + ' intentos') : 'sin intentos');
     cell.onclick = function () { App.openWord(word); };
     grid.appendChild(cell);
   });
 
   var avg = withData ? Math.round(sumPct / withData) : 0;
   var legend = App.el('div', 'acc-legend',
-    '<span>' + withData + ' de ' + words.length + ' practicadas' + (withData ? ' · media ' + avg + '%' : '') + '</span>' +
-    '<span class="acc-key"><i class="acc-hi"></i>≥80 <i class="acc-mid"></i>50–79 <i class="acc-lo"></i>&lt;50 <i class="acc-none"></i>sin datos</span>');
+    '<span>' + withData + ' con ≥10 intentos' + (withData ? ' · media ' + avg + '%' : '') + '</span>' +
+    '<span class="acc-key"><i class="acc-hi"></i>≥80 <i class="acc-mid"></i>50–79 <i class="acc-lo"></i>&lt;50 <i class="acc-none"></i>&lt;10 intentos</span>');
   box.appendChild(legend);
   box.appendChild(grid);
   return box;
@@ -349,7 +350,7 @@ function settings(w) {
 /* ---------- exportar / importar ---------- */
 function exportData() {
   var data = {};
-  ['chino_settings', 'chino_srs', 'chino_gam', 'chino_lists', 'chino_favs', 'chino_hist'].forEach(function (k) {
+  ['chino_settings', 'chino_srs', 'chino_gam', 'chino_lists', 'chino_favs', 'chino_hist', 'chino_acc', 'chino_learned', 'chino_read'].forEach(function (k) {
     data[k] = App.load(k, null);
   });
   var blob = new Blob([JSON.stringify({ app: 'chino-hsk', v: 2, date: new Date().toISOString(), data: data }, null, 1)], { type: 'application/json' });

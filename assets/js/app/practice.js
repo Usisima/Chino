@@ -128,23 +128,13 @@ function renderHub(w) {
   lvlRow.appendChild(sel);
   w.appendChild(lvlRow);
 
-  /* Tarjetas / repaso espaciado (movido desde Aprender) */
+  /* Tarjetas (movido desde Aprender) */
   w.appendChild(App.el('p', 'section-title', 'Tarjetas'));
-  var due = App.srsDue();
   var pool = App.levelWords(App.S.scheme, App.S.level);
   var news = App.srsNew(pool, 10);
-  hubCard(w, '复', due.length ? 'Repaso · ' + due.length + ' pendientes' : 'Repaso espaciado',
-    'Repasa con tarjetas las palabras que tocan hoy', function () {
-      if (!due.length) { App.toast('No hay repasos pendientes 🎉'); return; }
-      startFlash(w, 'srs', App.shuffle(due.slice(0, 40)));
-    });
   hubCard(w, '新', 'Palabras nuevas', news.length ? 'Aprende 10 nuevas del nivel ' + App.lvlName(App.S.scheme, App.S.level) : 'Ya estudiaste todas las de este nivel', function () {
     if (!news.length) { App.toast('Nivel completo ✓'); return; }
     startFlash(w, 'new', news);
-  });
-  hubCard(w, '卡', 'Flashcards libres', '15 tarjetas del nivel, sin afectar el repaso', function () {
-    if (!pool.length) { App.toast('Este nivel no tiene palabras'); return; }
-    startFlash(w, 'free', App.sample(pool, 15));
   });
 
   w.appendChild(App.el('p', 'section-title', 'Ejercicios'));

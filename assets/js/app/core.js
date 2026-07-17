@@ -405,14 +405,25 @@ App.day = function (field, inc) {
    Guarda los últimos ATTEMPTS intentos de cada palabra (1 acierto / 0 fallo).
    La precisión que se muestra en el perfil es el promedio de esa ventana. */
 var ATTEMPTS = 15;
+var MIN_LEARN = 3;   // aciertos seguidos mínimos para marcar «aprendida»
 App.acc = App.load('chino_acc', {});
+App.learned = App.load('chino_learned', {});   // sello permanente: nunca se quita
 App.recordAttempt = function (wordS, correct) {
   if (!wordS) return;
   var a = App.acc[wordS] || (App.acc[wordS] = []);
   a.push(correct ? 1 : 0);
   if (a.length > ATTEMPTS) a.splice(0, a.length - ATTEMPTS);
   App.save('chino_acc', App.acc);
+  // 100% de precisión (≥3 intentos) → aprendida para siempre, aunque luego falle
+  if (correct && !App.learned[wordS] && a.length >= MIN_LEARN && a.indexOf(0) < 0) {
+    App.learned[wordS] = Date.now();
+    App.save('chino_learned', App.learned);
+    var wd = App.byS[wordS];
+    App.toast('✓ Aprendida: ' + (wd ? App.disp(wd) : wordS));
+  }
 };
+/* aprendida = sello por precisión perfecta O dominada por el SRS */
+App.isLearned = function (s) { return !!App.learned[s] || App.srsStage(s) === 'known'; };
 /* {n, ok, pct} de una palabra, o null si nunca se ha intentado */
 App.accStats = function (wordS) {
   var a = App.acc[wordS];
@@ -542,8 +553,7 @@ App.pushHist = function (q) {
    ================================================================== */
 App.wordRow = function (w, opts) {
   opts = opts || {};
-  var stage = App.srsStage(w.s);
-  var row = App.el('div', 'w-row' + (stage === 'known' ? ' learned' : ''));
+  var row = App.el('div', 'w-row' + (App.isLearned(w.s) ? ' learned' : ''));
   row.innerHTML =
     '<span class="w-hanzi">' + App.dispTone(w) + '</span>' +
     '<div class="w-info">' +

@@ -223,13 +223,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .header-left { display: flex; align-items: center; gap: 0.8rem; min-width: 0; overflow: hidden; }
 .header-logo { display: flex; align-items: center; flex-shrink: 0; }
 .header-logo svg { height: 30px; width: auto; display: block; overflow: visible; }
-.hdr-ring {
-  fill: none; stroke: var(--gold); stroke-width: 6; stroke-linecap: round;
-  stroke-dasharray: 264; stroke-dashoffset: 264;
-  transform: rotate(-90deg); transform-origin: 50% 50%;
-  animation: introRing 1.1s cubic-bezier(0.4,0,0.2,1) 0.1s forwards;
-}
-.hdr-zh { font-family: var(--hanzi); font-size: 46px; fill: var(--gold); opacity: 0; animation: introHanzi 0.7s ease 0.9s forwards; }
+.hdr-uki { fill: var(--gold); }
 .header-divider { width: 1px; background: var(--border2); align-self: stretch; flex-shrink: 0; }
 .header-text { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .header-title {
@@ -1066,6 +1060,5 @@ select option { background: var(--surface); color: var(--ink); }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  #intro .intro-ring, .hdr-ring { stroke-dashoffset: 0 !important; }
-  #intro .intro-zh, .hdr-zh { opacity: 1 !important; }
+  #intro .intro-lp { stroke-dashoffset: 0 !important; fill: var(--gold) !important; stroke-opacity: 0 !important; }
 }
