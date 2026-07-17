@@ -162,9 +162,17 @@ App.views.songs = function () {
   });
 };
 
+/* muestra u oculta la cabecera «歌曲 · Canciones» (título + divisor) */
+function setHeader(w, show) {
+  for (var i = 0; i < 2 && i < w.children.length; i++) {
+    w.children[i].style.display = show ? '' : 'none';
+  }
+}
+
 function renderList(w) {
   stopPlay();
   sub = 'list';
+  setHeader(w, true);
   while (w.children.length > 2) w.removeChild(w.lastChild);
 
   SONGS.forEach(function (song) {
@@ -188,6 +196,7 @@ function renderSong(w, song) {
   markMode = false;
   cardEl = null; cardSpan = null;
   while (w.children.length > 2) w.removeChild(w.lastChild);
+  setHeader(w, false);   // sin cabecera «Canciones» en la vista de la canción
 
   var playerEl = App.el('div', 'player',
     artHtml(song) +
