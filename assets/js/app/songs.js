@@ -73,6 +73,51 @@ var SONGS = [];
   });
 })();
 
+/* 新世界 — Sleep Leaps 碎梦飞跃, álbum «外面是夏天». Letra en simplificado.
+   Copia personal: audio local en assets/songs/xinshijie.mp3 (no incluido);
+   tiempos por línea del LRC sincronizado (NetEase). Pinyin revisado a mano
+   (一/不 con sandhi, partículas 地/个/字 y 漂亮/故事 en tono neutro). */
+(function () {
+  var L = {
+    intro: { hz: 'Check Check', py: '', es: '' },
+    a: { hz: '谁握着那根线', py: 'shuí wò zhe nà gēn xiàn', es: '¿Quién sostiene ese hilo?' },
+    b: { hz: '操纵着她的声音和表现', py: 'cāo zòng zhe tā de shēng yīn hé biǎo xiàn', es: 'que maneja su voz y su actuación' },
+    c: { hz: '哦看不见', py: 'ó kàn bú jiàn', es: 'ah, no se ve' },
+    d: { hz: '偶尔', py: 'ǒu ěr', es: 'a veces' },
+    e: { hz: '也会感到疲倦', py: 'yě huì gǎn dào pí juàn', es: 'también siente cansancio' },
+    f: { hz: '舞台灯熄灭', py: 'wǔ tái dēng xī miè', es: 'las luces del escenario se apagan' },
+    g: { hz: '她闭上了双眼', py: 'tā bì shàng le shuāng yǎn', es: 'ella cierra los ojos' },
+    h: { hz: '微笑着一成不变地', py: 'wēi xiào zhe yì chéng bú biàn de', es: 'sonriendo, siempre igual' },
+    i: { hz: '歌唱着不属于她的', py: 'gē chàng zhe bù shǔ yú tā de', es: 'cantando lo que no le pertenece' },
+    j: { hz: '微笑着成为另一个', py: 'wēi xiào zhe chéng wéi lìng yí ge', es: 'sonriendo, se vuelve otra' },
+    k: { hz: '歌唱着遗忘了', py: 'gē chàng zhe yí wàng le', es: 'cantando, ya lo ha olvidado' },
+    l: { hz: '掌声之间', py: 'zhǎng shēng zhī jiān', es: 'entre los aplausos' },
+    m: { hz: '欢呼之间', py: 'huān hū zhī jiān', es: 'entre las ovaciones' },
+    n: { hz: '光圈中眩晕的脸', py: 'guāng quān zhōng xuàn yùn de liǎn', es: 'un rostro que se marea bajo los focos' },
+    o: { hz: '签下契约来到新世界', py: 'qiān xià qì yuē lái dào xīn shì jiè', es: 'firma el contrato y llega al nuevo mundo' },
+    p: { hz: '丢掉名字', py: 'diū diào míng zi', es: 'tira su nombre' },
+    q: { hz: '丢掉昨日', py: 'diū diào zuó rì', es: 'tira su ayer' },
+    r: { hz: '穿上漂亮的故事', py: 'chuān shàng piào liang de gù shi', es: 'se viste con una bonita historia' }
+  };
+  /* [clave de línea, segundo en que empieza] según el LRC */
+  var seq = [
+    ['intro', 46.32], ['a', 47.67], ['b', 49.41], ['c', 54.87], ['d', 57.37], ['e', 58.80], ['f', 60.48], ['g', 61.98],
+    ['h', 68.49], ['i', 71.22], ['j', 74.03], ['k', 76.71], ['h', 79.47], ['i', 82.11], ['j', 84.88], ['k', 87.58],
+    ['l', 112.20], ['m', 113.52], ['n', 114.93], ['o', 117.66], ['p', 123.18], ['q', 124.53], ['r', 125.79], ['o', 128.52],
+    ['h', 159.00], ['i', 161.83], ['j', 164.37], ['k', 167.21], ['h', 169.99], ['i', 172.63], ['j', 175.30], ['k', 177.96],
+    ['l', 224.67], ['m', 225.96], ['n', 227.34], ['o', 230.16], ['p', 235.65], ['q', 236.97], ['r', 238.26], ['o', 240.99]
+  ];
+  SONGS.push({
+    id: 'xinshijie', title: 'New World', sub: 'Sleep Leaps 碎梦飞跃', art: '新',
+    grad: 'linear-gradient(145deg,#2C6BA8,#7A9EC0)',
+    cover: 'assets/songs/xinshijie.jpg',
+    audio: 'assets/songs/xinshijie.mp3',
+    lines: seq.map(function (s) {
+      return { hz: L[s[0]].hz, py: L[s[0]].py, es: L[s[0]].es, t: s[1] };
+    })
+  });
+})();
+
 /* caracteres únicos (hanzi) de una canción */
 function songChars(song) {
   var seen = {}, out = [];
@@ -202,13 +247,11 @@ function renderList(w) {
   while (w.children.length > 2) w.removeChild(w.lastChild);
 
   SONGS.forEach(function (song) {
-    var total = songChars(song).length, kn = knownCount(song);
     var card = App.el('div', 'song-card',
       artHtml(song) +
       '<div class="song-meta">' +
         '<div class="song-name">' + App.esc(song.title) + '</div>' +
         '<div class="song-sub">' + App.esc(song.sub) + '</div>' +
-        '<div class="song-count">' + kn + ' / ' + total + ' caracteres que sabes leer</div>' +
       '</div>' +
       '<svg class="song-arrow" viewBox="0 0 24 24"><use href="#icon-arrow"/></svg>');
     card.onclick = function () { App.pushState({ sub: 'song' }); renderSong(w, song); };
@@ -347,7 +390,7 @@ function showCharCard(span, ch, syl, w, song) {
   cardEl = App.el('div', 'ly-card',
     '<span class="ly-card-ch t' + tone + '">' + App.esc(ch) + '</span>' +
     '<div class="ly-card-info">' +
-      '<div class="ly-card-py">' + App.esc(py) + (c && c[3] ? ' · ' + c[3] + ' trazos' : '') + '</div>' +
+      '<div class="ly-card-py">' + App.esc(py) + '</div>' +
       '<div class="ly-card-es">' + App.esc(trans) + '</div>' +
     '</div>' +
     '<div class="ly-card-btns">' +

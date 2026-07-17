@@ -608,17 +608,11 @@ function renderWord(body, w) {
   body.appendChild(head);
 
   // detalles
-  var strokesTotal = 0;
-  dispS.split('').forEach(function (ch) {
-    var c = App.CHARS[ch];
-    if (c) strokesTotal += c[3] || 0;
-  });
   var it = App.srsGet(w.s);
   var kv = App.el('div', 'card');
   kv.innerHTML =
     (w.cls ? '<div class="kv"><span class="k">Clasificador</span><span class="v zh">' + App.esc(w.cls) + '</span></div>' : '') +
     (w.rad ? '<div class="kv"><span class="k">Radical</span><span class="v"><span class="zh">' + App.esc(w.rad) + '</span></span></div>' : '') +
-    (strokesTotal ? '<div class="kv"><span class="k">Trazos</span><span class="v">' + strokesTotal + '</span></div>' : '') +
     (w.pos ? '<div class="kv"><span class="k">Categoría</span><span class="v">' + App.esc(App.posES(w.pos)) + '</span></div>' : '') +
     '<div class="kv"><span class="k">Estudio</span><span class="v">' + (it ? (App.srsStage(w.s) === 'known' ? 'Dominada' : 'Aprendiendo') + ' · ' + it.reps + ' repasos' : 'Sin estudiar') + '</span></div>';
   body.appendChild(kv);
@@ -668,12 +662,13 @@ function charCard(ch) {
     } else if (c[4] && ETYM_ES[c[4]]) {
       etym = 'Carácter ' + ETYM_ES[c[4]] + '.';
     }
+    var metaParts = [];
+    if (c[1]) metaParts.push(App.esc(c[1]));
+    if (c[2]) metaParts.push('radical <span class="zh">' + App.esc(c[2]) + '</span>');
     info.innerHTML =
       (defHtml ? '<div class="char-def">' + defHtml + '</div>' : '') +
       '<div class="char-meta">' +
-        (c[1] ? c[1] + ' · ' : '') +
-        (c[2] ? 'radical <span class="zh">' + App.esc(c[2]) + '</span> · ' : '') +
-        (c[3] ? c[3] + ' trazos' : '') +
+        metaParts.join(' · ') +
         (c[6] && c[6] !== '？' ? '<br>descomposición: <span class="zh">' + App.esc(c[6]) + '</span>' : '') +
       '</div>' +
       (etym ? '<div class="etym">' + etym + '</div>' : '');

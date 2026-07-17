@@ -148,7 +148,7 @@ def download_auto(song: dict, dest: Path, ffmpeg: str,
     opts = {
         "format": "bestaudio/best",
         "outtmpl": out_template,
-        "noplaylist": True,
+        "noplaylist": True,       # con una URL de playlist, baja solo ese video
         "quiet": True,
         "no_warnings": True,
         "default_search": "ytsearch1",
@@ -169,9 +169,38 @@ def download_auto(song: dict, dest: Path, ffmpeg: str,
     except Exception as exc:  # noqa: BLE001
         die(f"No se pudo descargar el audio: {exc}")
 
+    # limpia el archivo crudo (webm/m4a/opus…) que queda tras extraer el mp3
+    for leftover in dest.parent.glob(dest.stem + ".*"):
+        if leftover != dest and leftover.suffix.lower() != ".jpg":
+            leftover.unlink(missing_ok=True)
+
     if not dest.exists():
         die("La descarga terminó pero no se generó el mp3 esperado.")
-    print(f"[ok] Audio listo: {dest.relative_to(ROOT)}")
+
+    dur = probe_duration(dest, ffmpeg)
+    extra = ""
+    if dur:
+        mm, ss = divmod(int(dur), 60)
+        extra = f"  ({mm}:{ss:02d})"
+        if dur > 600:  # una pista suele durar < 10 min; más = probable álbum entero
+            print(f"[!] Aviso: el audio dura {mm}:{ss:02d}. Puede ser el álbum completo "
+                  "en un solo video, no la pista. Prueba con --url de la pista concreta.")
+    print(f"[ok] Audio listo: {dest.relative_to(ROOT)}{extra}")
+
+
+def probe_duration(path: Path, ffmpeg: str) -> float:
+    """Duración en segundos vía ffprobe (junto a ffmpeg). 0 si no se puede leer."""
+    probe = Path(ffmpeg).with_name("ffprobe" + Path(ffmpeg).suffix) if ffmpeg else Path("ffprobe")
+    if not probe.exists() and ffmpeg:
+        probe = Path("ffprobe")
+    try:
+        r = subprocess.run(
+            [str(probe), "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+            capture_output=True, text=True)
+        return float(r.stdout.strip())
+    except Exception:  # noqa: BLE001
+        return 0.0
 
 
 def main() -> None:
